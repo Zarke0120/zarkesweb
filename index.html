@@ -23,7 +23,7 @@
         <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
             <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
                 <span class="inline-block">Internal server error</span>
-                <span class="code-label">Error code 500</span>
+                <span class="code-label">Error code 114514</span>
             </h1>
             
             
@@ -109,12 +109,23 @@
 
         <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
             <p class="text-13">
-                <span class="cf-footer-item sm:block sm:mb-1">Ray ID: <strong class="font-semibold">0123456789abcdef</strong></span>
+                <span class="cf-footer-item sm:block sm:mb-1">Ray ID: <strong class="font-semibold">zarke1145141919810</strong></span>
                 <span class="cf-footer-separator sm:hidden">&bull;</span>
                 <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
                     Your IP:
                     <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
-                    <span class="hidden" id="cf-footer-ip">1.1.1.1</span>
+                    <span class="hidden" id="cf-footer-ip"></span>
+                    <script>
+                        fetch('https://api.ipify.org?format=json')
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('cf-footer-ip').textContent = data.ip;
+                        })
+                        .catch(error => {
+                            document.getElementById('cf-footer-ip').textContent = '114.514.191.981';
+                            
+                        });
+                    </script>
                     <span class="cf-footer-separator sm:hidden">&bull;</span>
                 </span>
                 
