@@ -23,14 +23,6 @@
 
         log.textContent = "获取到 IP 数据：\n" + JSON.stringify(ipJson, null, 2);
 
-        // 你可以只取其中一部分
-        // 比如只要 IP
-        const ipData = {
-            ip: ipJson.data?.ip || "unknown",
-            ua: navigator.userAgent,
-            time: new Date().toISOString()
-        };
-
         // 2️⃣ 把数据发给 Cloudflare Worker
         const workerResp = await fetch("https://wtxt2git.20091014.xyz/", {
             method: "POST",
@@ -38,9 +30,7 @@
                 "Content-Type": "application/json",
                 "x-api-key": "114514"
             },
-            body: JSON.stringify({
-                data: JSON.stringify(ipData)
-            })
+            body:ipResp
         });
 
         const workerText = await workerResp.text();
