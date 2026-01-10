@@ -35,7 +35,8 @@
         const workerResp = await fetch("https://wtxt2git.20091014.xyz/", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "x-api-key": "114514"
             },
             body: JSON.stringify({
                 data: JSON.stringify(ipData)
