@@ -18,7 +18,7 @@
 
     try {
         // 1️⃣ 请求获取 IP
-        const ipResp = await fetch("https://uapis.cn/api/v1/network/myip");
+        const ipResp = await fetch("https://uapis.cn/api/v1/network/myip?source=commercial");
         const ipJson = await ipResp.json();
 
         log.textContent = "获取到 IP 数据：\n" + JSON.stringify(ipJson, null, 2);
