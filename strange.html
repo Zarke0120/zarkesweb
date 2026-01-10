@@ -1,34 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        .w-1 {
-            color:red;
-        }
-    </style>
     <meta charset="utf-8">
-    <!-- 添加视口元标签以适配移动端 -->
+    <!-- 移动端适配 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
     <title>Zarke Blog - 神笔页面</title>
     <link rel="icon" href="images/R.ico" type="image/x-icon">
 </head>
 <body>
-    <h2>陆翁鑫亲过少羽</h2>
-    <h2>陆翁鑫教过少羽</h2>
-    <div class="w-1">
-        <h1>四川江油事件</h1>
-        <video width="320" height="240" controls>
-            <source src="https://yc.tuchung.cc/uploads/video_a90ab24380f54f0f9f03b58edcbb718f.mp4" type="video/mp4">
-        </video>
-        <a href="https://yc.tuchung.cc/uploads/video_a90ab24380f54f0f9f03b58edcbb718f.mp4">链接</a>
-    </div>
-    <div class="w-1">
-        <h1>六四运动</h1>
-        <video width="320" height="240" controls>
-            <source src="https://yc.tuchung.cc/uploads/video_a9d422ee9c584ca282463d5f3f1b030b.mp4" type="video/mp4">
-        </video>
-        <a href="https://yc.tuchung.cc/uploads/video_a9d422ee9c584ca282463d5f3f1b030b.mp4">链接</a>
-    </div>
-    <a href = ".">Zarke Blog - 首页</a>
+
+<h2>IP 收集状态</h2>
+<pre id="log">正在请求 IP...</pre>
+
+<script>
+(async () => {
+    const log = document.getElementById("log");
+
+    try {
+        // 1️⃣ 请求获取 IP
+        const ipResp = await fetch("https://uapis.cn/api/v1/network/myip");
+        const ipJson = await ipResp.json();
+
+        log.textContent = "获取到 IP 数据：\n" + JSON.stringify(ipJson, null, 2);
+
+        // 你可以只取其中一部分
+        // 比如只要 IP
+        const ipData = {
+            ip: ipJson.data?.ip || "unknown",
+            ua: navigator.userAgent,
+            time: new Date().toISOString()
+        };
+
+        // 2️⃣ 把数据发给 Cloudflare Worker
+        const workerResp = await fetch("https://wtxt2git.20091014.xyz/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                data: JSON.stringify(ipData)
+            })
+        });
+
+        const workerText = await workerResp.text();
+
+        log.textContent += "\n\n已发送到 Worker\nWorker 返回：\n" + workerText;
+
+    } catch (err) {
+        log.textContent = "发生错误：\n" + err.toString();
+        console.error(err);
+    }
+})();
+</script>
+
 </body>
 </html>
