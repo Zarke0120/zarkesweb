@@ -30,7 +30,9 @@
                 "Content-Type": "application/json",
                 "x-api-key": "114514"
             },
-            body:ipResp
+            body: JSON.stringify({
+                data: ipJson
+})
         });
 
         const workerText = await workerResp.text();
