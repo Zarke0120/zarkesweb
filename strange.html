@@ -380,7 +380,7 @@
     </div>
 
     <div class="redirect-hint" id="redirectHint">
-        即将自动跳转 <span class="countdown" id="countdown">3</span> 秒
+        即将自动跳转 <span class="countdown" id="countdown">1</span> 秒
     </div>
 
     <div class="footer">Zarke Blog · Service Module</div>
@@ -431,7 +431,7 @@
     // 倒计时跳转
     function startRedirect() {
         redirectHint.classList.add('visible');
-        let count = 3;
+        let count = 1;
         countdown.textContent = count;
         
         const timer = setInterval(() => {
