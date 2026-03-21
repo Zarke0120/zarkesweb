@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>seazon | Steam Profile Experience</title>
     <style>
         :root {
@@ -11,9 +12,13 @@
             --card-bg: rgba(30, 41, 59, 0.7);
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 0;
+            padding: 16px;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
             color: #f8fafc;
@@ -27,28 +32,34 @@
         /* 磨砂玻璃卡片 */
         .profile-card {
             width: 850px;
+            max-width: 100%;
             background: var(--card-bg);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
             padding: 40px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             position: relative;
+            overflow: hidden;
         }
 
-        /* 顶部装饰线 */
+        /* 顶部装饰线 - 修复贴合问题 */
         .profile-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; height: 4px;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
             background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 24px 24px 0 0;
         }
 
         .header {
             display: flex;
             align-items: center;
             margin-bottom: 30px;
+            gap: 25px;
         }
 
         .avatar-wrapper {
@@ -56,7 +67,7 @@
             padding: 5px;
             background: linear-gradient(45deg, var(--primary), var(--accent));
             border-radius: 20px;
-            margin-right: 25px;
+            flex-shrink: 0;
         }
 
         .avatar {
@@ -74,6 +85,8 @@
             background: linear-gradient(to right, #fff, #94a3b8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
+            word-break: break-word;
         }
 
         .level-badge {
@@ -122,6 +135,14 @@
             margin-bottom: 30px;
         }
 
+        .bio-section p {
+            margin: 0 0 12px 0;
+        }
+
+        .bio-section p:last-child {
+            margin-bottom: 0;
+        }
+
         .featured-game {
             background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
                         url('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/730/capsule_616x353.jpg');
@@ -132,16 +153,33 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .game-info h3 { margin: 0; color: #fff; }
-        .game-time { font-size: 0.9em; color: #fbbf24; }
+        .game-info h3 { 
+            margin: 0 0 8px 0; 
+            color: #fff; 
+        }
+        .game-time { 
+            font-size: 0.9em; 
+            color: #fbbf24; 
+        }
+
+        .game-status {
+            font-size: 0.8em; 
+            background: rgba(34, 197, 94, 0.2); 
+            color: #4ade80; 
+            padding: 5px 10px; 
+            border-radius: 8px;
+            white-space: nowrap;
+        }
 
         .badges {
             display: flex;
             gap: 15px;
             margin-top: 25px;
+            flex-wrap: wrap;
         }
 
         .badge-icon {
@@ -152,6 +190,158 @@
         }
 
         .badge-icon:hover { transform: translateY(-5px); }
+
+        /* ========== 响应式设计 ========== */
+        
+        /* 平板设备 */
+        @media (max-width: 768px) {
+            .profile-card {
+                padding: 30px 25px;
+            }
+            
+            .avatar {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .user-info h1 {
+                font-size: 2em;
+            }
+            
+            .stats-grid {
+                gap: 15px;
+            }
+            
+            .stat-value {
+                font-size: 1.3em;
+            }
+        }
+
+        /* 手机设备 */
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+                align-items: flex-start;
+                padding-top: 20px;
+                padding-bottom: 20px;
+            }
+            
+            .profile-card {
+                padding: 25px 20px;
+                border-radius: 20px;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .avatar-wrapper {
+                margin-right: 0;
+            }
+            
+            .avatar {
+                width: 90px;
+                height: 90px;
+            }
+            
+            .user-info h1 {
+                font-size: 1.75em;
+            }
+            
+            .level-badge {
+                font-size: 0.85em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .stat-item {
+                padding: 12px 8px;
+            }
+            
+            .stat-value {
+                font-size: 1.2em;
+            }
+            
+            .stat-label {
+                font-size: 0.7em;
+            }
+            
+            .bio-section {
+                font-size: 0.95em;
+            }
+            
+            .featured-game {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px 15px;
+            }
+            
+            .game-info h3 {
+                font-size: 1.1em;
+            }
+            
+            .game-time {
+                font-size: 0.85em;
+            }
+            
+            .badges {
+                justify-content: center;
+                gap: 12px;
+            }
+            
+            .badge-icon {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        /* 小屏手机 */
+        @media (max-width: 380px) {
+            .profile-card {
+                padding: 20px 15px;
+            }
+            
+            .avatar {
+                width: 75px;
+                height: 75px;
+            }
+            
+            .avatar-wrapper {
+                border-radius: 16px;
+                padding: 4px;
+            }
+            
+            .avatar {
+                border-radius: 12px;
+            }
+            
+            .user-info h1 {
+                font-size: 1.5em;
+            }
+            
+            .stats-grid {
+                gap: 8px;
+            }
+            
+            .stat-item {
+                padding: 10px 6px;
+                border-radius: 12px;
+            }
+            
+            .stat-value {
+                font-size: 1.1em;
+            }
+            
+            .featured-game {
+                padding: 15px 12px;
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -192,9 +382,7 @@
             <h3>Counter-Strike 2</h3>
             <span class="game-time">🕒 已游玩 884 小时</span>
         </div>
-        <div class="game-status" style="font-size: 0.8em; background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 5px 10px; border-radius: 8px;">
-            正在战斗中
-        </div>
+        <div class="game-status">正在战斗中</div>
     </div>
 
     <div class="badges">
