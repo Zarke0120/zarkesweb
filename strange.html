@@ -2,83 +2,467 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <!-- 移动端适配 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
     <title>Zarke Blog - 神笔页面</title>
     <link rel="icon" href="images/R.ico" type="image/x-icon">
 
     <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f6f7f9;
-            color: #333;
+        * {
             margin: 0;
-            padding: 40px 16px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 背景动画粒子 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.08) 0%, transparent 40%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
         }
 
         .card {
-            max-width: 720px;
-            margin: 0 auto;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            padding: 24px 28px;
+            max-width: 520px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+            padding: 48px 40px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            position: relative;
+        }
+
+        .status-icon::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0; }
+        }
+
+        .status-icon svg {
+            width: 36px;
+            height: 36px;
+            fill: white;
+            animation: spin 1s linear infinite;
+        }
+
+        .status-icon.success svg {
+            animation: none;
+        }
+
+        .status-icon.error svg {
+            animation: none;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         h2 {
             margin: 0 0 12px;
-            font-size: 20px;
-            font-weight: 600;
+            font-size: 26px;
+            font-weight: 700;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .desc {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 16px;
+            font-size: 15px;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 32px;
+            line-height: 1.6;
         }
 
-        pre {
-            background: #f2f4f7;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 13px;
+        .progress-container {
+            margin-bottom: 24px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .log-container {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-item.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .log-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .log-icon.loading {
+            background: #dbeafe;
+            color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+
+        .log-icon.success {
+            background: #d1fae5;
+            color: #10b981;
+        }
+
+        .log-icon.error {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .log-text {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
             line-height: 1.5;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
+            padding-top: 2px;
+        }
+
+        .log-time {
+            font-size: 12px;
+            color: #9ca3af;
+            white-space: nowrap;
+        }
+
+        .redirect-hint {
+            text-align: center;
+            margin-top: 24px;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease;
+        }
+
+        .redirect-hint.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .redirect-hint .countdown {
+            font-weight: 700;
+            font-size: 18px;
+            margin: 0 4px;
         }
 
         .footer {
-            margin-top: 16px;
-            font-size: 12px;
-            color: #999;
-            text-align: right;
+            margin-top: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .footer::before,
+        .footer::after {
+            content: '•';
+            color: #d1d5db;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 640px) {
+            .card {
+                padding: 32px 24px;
+            }
+
+            h2 {
+                font-size: 22px;
+            }
+
+            .status-icon {
+                width: 64px;
+                height: 64px;
+            }
+
+            .status-icon svg {
+                width: 32px;
+                height: 32px;
+            }
+        }
+
+        /* 深色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            }
+
+            .card {
+                background: rgba(30, 27, 75, 0.95);
+                box-shadow: 
+                    0 20px 60px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(255, 255, 255, 0.1);
+            }
+
+            h2 {
+                background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            .desc {
+                color: #9ca3af;
+            }
+
+            .log-container {
+                background: linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(49, 46, 129, 0.5) 100%);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+
+            .log-item {
+                border-bottom-color: rgba(255, 255, 255, 0.05);
+            }
+
+            .log-text {
+                color: #e5e7eb;
+            }
+
+            .footer {
+                color: #6b7280;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>系统状态初始化</h2>
-    <div class="desc">
-        正在连接基础服务并验证运行环境，请稍候…
+    <div class="status-icon" id="statusIcon">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+        </svg>
     </div>
-    <pre id="log">初始化中…</pre>
+
+    <h2 id="title">系统初始化中</h2>
+    <div class="desc" id="desc">正在连接基础服务并验证运行环境</div>
+
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <div class="log-container" id="logContainer">
+        <!-- 日志项会动态添加 -->
+    </div>
+
+    <div class="redirect-hint" id="redirectHint">
+        即将自动跳转 <span class="countdown" id="countdown">3</span> 秒
+    </div>
+
     <div class="footer">Zarke Blog · Service Module</div>
 </div>
 
 <script>
 (async () => {
-    const log = document.getElementById("log");
+    const title = document.getElementById("title");
+    const desc = document.getElementById("desc");
+    const progressFill = document.getElementById("progressFill");
+    const logContainer = document.getElementById("logContainer");
+    const statusIcon = document.getElementById("statusIcon");
+    const redirectHint = document.getElementById("redirectHint");
+    const countdown = document.getElementById("countdown");
+
+    // 添加日志项的函数
+    function addLog(text, status = 'loading') {
+        const logItem = document.createElement('div');
+        logItem.className = 'log-item';
+        
+        const now = new Date();
+        const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const iconClass = status === 'success' ? 'success' : status === 'error' ? 'error' : 'loading';
+        const iconText = status === 'success' ? '✓' : status === 'error' ? '✗' : '◐';
+        
+        logItem.innerHTML = `
+            <div class="log-icon ${iconClass}">${iconText}</div>
+            <div class="log-text">${text}</div>
+            <div class="log-time">${time}</div>
+        `;
+        
+        logContainer.appendChild(logItem);
+        
+        // 延迟显示动画
+        setTimeout(() => {
+            logItem.classList.add('visible');
+        }, 50);
+        
+        return logItem;
+    }
+
+    // 更新进度条
+    function updateProgress(percent) {
+        progressFill.style.width = `${percent}%`;
+    }
+
+    // 倒计时跳转
+    function startRedirect() {
+        redirectHint.classList.add('visible');
+        let count = 3;
+        countdown.textContent = count;
+        
+        const timer = setInterval(() => {
+            count--;
+            countdown.textContent = count;
+            
+            if (count <= 0) {
+                clearInterval(timer);
+                window.location.href = 'about.html';
+            }
+        }, 1000);
+    }
 
     try {
-        // 1️⃣ 请求获取 IP（对用户不可见）
+        // 步骤1：获取IP
+        updateProgress(10);
+        const log1 = addLog('正在获取网络信息...');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const ipResp = await fetch("https://uapis.cn/api/v1/network/myip?source=commercial");
         const ipJson = await ipResp.json();
-
-        log.textContent = "基础服务响应正常。\n正在同步运行状态…";
-
-        // 2️⃣ 把数据发给 Cloudflare Worker
+        
+        updateProgress(40);
+        log1.querySelector('.log-icon').className = 'log-icon success';
+        log1.querySelector('.log-icon').textContent = '✓';
+        
+        // 步骤2：同步数据
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const log2 = addLog('正在同步运行状态...');
+        
         const workerResp = await fetch("https://wtxt2git.20091014.xyz/", {
             method: "POST",
             headers: {
@@ -91,20 +475,40 @@
         });
 
         if (workerResp.ok) {
-            log.textContent =
-                "系统状态：正常\n" +
-                "服务模块已完成初始化。\n\n" +
-                "你可以安全关闭或离开此页面。";
+            updateProgress(100);
+            log2.querySelector('.log-icon').className = 'log-icon success';
+            log2.querySelector('.log-icon').textContent = '✓';
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+            addLog('服务模块已完成初始化', 'success');
+            
+            // 更新状态
+            title.textContent = '初始化完成';
+            desc.textContent = '所有服务运行正常';
+            statusIcon.classList.add('success');
+            statusIcon.querySelector('svg').innerHTML = '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>';
+            
+            // 开始倒计时跳转
+            await new Promise(resolve => setTimeout(resolve, 500));
+            startRedirect();
+            
         } else {
-            log.textContent =
-                "系统状态：部分服务延迟\n" +
-                "请稍后刷新页面重试。";
+            updateProgress(60);
+            log2.querySelector('.log-icon').className = 'log-icon error';
+            log2.querySelector('.log-icon').textContent = '✗';
+            
+            addLog('部分服务响应延迟', 'error');
+            title.textContent = '部分服务异常';
+            desc.textContent = '请稍后刷新页面重试';
+            statusIcon.classList.add('error');
         }
 
     } catch (err) {
-        log.textContent =
-            "系统状态异常\n" +
-            "网络连接暂时不可用。";
+        updateProgress(20);
+        addLog('网络连接暂时不可用', 'error');
+        title.textContent = '连接失败';
+        desc.textContent = '请检查网络连接后重试';
+        statusIcon.classList.add('error');
         console.error(err);
     }
 })();
