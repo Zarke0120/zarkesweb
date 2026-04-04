@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>蓝奏云文件</title>
+    <!-- 引入 Google Fonts 提升字体质感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 (免费图标库，增加视觉精致度) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            background: radial-gradient(circle at 10% 20%, rgba(12, 20, 35, 1) 0%, rgba(5, 10, 22, 0.95) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 动态光晕背景装饰 - 增加高端氛围 */
+        body::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: radial-gradient(ellipse at 70% 30%, rgba(88, 130, 255, 0.15), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 2px, transparent 2px, transparent 8px);
+            pointer-events: none;
+        }
+
+        /* 主卡片 - 毛玻璃高端质感 */
+        .glass-card {
+            max-width: 560px;
+            width: 100%;
+            background: rgba(18, 25, 45, 0.58);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 2.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 2;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 35px 55px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+        }
+
+        /* 卡片内边距 */
+        .card-content {
+            padding: 2rem 1.8rem 2.2rem;
+        }
+
+        /* 头部图标区域 */
+        .icon-header {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.2rem;
+        }
+        .icon-circle {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.25), rgba(0, 242, 254, 0.15));
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
+        }
+        .icon-circle i {
+            font-size: 2.6rem;
+            color: white;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* 标题与描述 */
+        .title {
+            text-align: center;
+            font-size: 1.85rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #FFFFFF, #C0D9FF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .sub {
+            text-align: center;
+            color: rgba(220, 235, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 400;
+            margin-bottom: 2rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.2);
+            display: inline-block;
+            width: auto;
+            padding-bottom: 0.5rem;
+            letter-spacing: 0.2px;
+        }
+        .sub-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 信息条目容器 */
+        .info-row {
+            background: rgba(10, 18, 30, 0.55);
+            border-radius: 1.5rem;
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 1.2rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+        .info-row:hover {
+            border-color: rgba(79, 172, 254, 0.5);
+            background: rgba(15, 25, 40, 0.7);
+        }
+
+        .label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+            color: #9BB4FF;
+            margin-bottom: 10px;
+        }
+        .label i {
+            font-size: 1rem;
+            width: 20px;
+        }
+        .value-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        .value-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #F0F4FF;
+            word-break: break-all;
+            font-family: 'Inter', monospace;
+            letter-spacing: 0.2px;
+            background: rgba(0,0,0,0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 1.2rem;
+            flex: 1;
+            border: 0.5px solid rgba(255,255,255,0.1);
+        }
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #CDE1FF;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 38px;
+            height: 38px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+        .copy-btn:hover {
+            background: rgba(79, 172, 254, 0.45);
+            color: white;
+            transform: scale(1.02);
+        }
+        .copy-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* 主按钮 - 一键访问 */
+        .primary-action {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .btn-access {
+            width: 100%;
+            background: linear-gradient(95deg, #2C6EFF, #5F9EFF);
+            border: none;
+            padding: 1rem 0;
+            border-radius: 2.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 10px 18px -6px rgba(44, 110, 255, 0.4);
+            border: 0.5px solid rgba(255,255,255,0.3);
+        }
+        .btn-access i {
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        .btn-access:hover {
+            background: linear-gradient(95deg, #1A5AEF, #4680FF);
+            transform: scale(1.01);
+            box-shadow: 0 15px 25px -8px rgba(44, 110, 255, 0.6);
+        }
+        .btn-access:active {
+            transform: scale(0.98);
+        }
+
+        /* 辅助提示区 */
+        .helper-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(200, 215, 250, 0.55);
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .helper-note span i {
+            margin-right: 5px;
+            font-size: 0.7rem;
+        }
+
+        /* toast 通知 */
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(16px);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .toast-message.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 响应式 */
+        @media (max-width: 500px) {
+            .card-content {
+                padding: 1.5rem 1.3rem 1.8rem;
+            }
+            .value-text {
+                font-size: 0.85rem;
+                padding: 0.3rem 0.7rem;
+            }
+            .title {
+                font-size: 1.6rem;
+            }
+            .btn-access {
+                padding: 0.8rem 0;
+                font-size: 1rem;
+            }
+            .icon-circle {
+                width: 60px;
+                height: 60px;
+            }
+            .icon-circle i {
+                font-size: 2.2rem;
+            }
+        }
+        @media (max-width: 420px) {
+            .value-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .copy-btn {
+                align-self: flex-end;
+            }
+        }
+
+        /* 密码专用样式轻强调 */
+        .password-value {
+            font-family: 'Inter', monospace;
+            font-weight: 600;
+            letter-spacing: 1px;
+            background: rgba(44, 110, 255, 0.2);
+            border-left: 2px solid #5F9EFF;
+        }
+        .footer-meta {
+            margin-top: 1.5rem;
+            font-size: 0.7rem;
+            text-align: center;
+            color: rgba(180, 200, 240, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div class="glass-card">
+    <div class="card-content">
+        <!-- 图标区 -->
+        <div class="icon-header">
+            <div class="icon-circle">
+                <i class="fas fa-cloud-arrow-up"></i>
+            </div>
+        </div>
+        <!-- 标题区域 -->
+        <div class="title">文件分享</div>
+        <div class="sub-wrapper">
+        </div>
+
+        <!-- 链接区域 -->
+        <div class="info-row">
+            <div class="label">
+                <i class="fas fa-link"></i>
+                <span>下载链接</span>
+            </div>
+            <div class="value-area">
+                <div class="value-text" id="downloadLinkText">https://wwbqt.lanzout.com/iog4O3mgfnqb</div>
+                <button class="copy-btn" id="copyLinkBtn" aria-label="复制链接">
+                    <i class="far fa-copy"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 密码区域 -->
+        <div class="info-row">
+            <div class="label">
+                <i class="fas fa-key"></i>
+                <span>访问密码</span>
+            </div>
+            <div class="value-area">
+                <div class="value-text password-value" id="passwordText">5c22</div>
+                <button class="copy-btn" id="copyPwdBtn" aria-label="复制密码">
+                    <i class="far fa-copy"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 主要操作按钮：一键复制密码并打开链接 -->
+        <div class="primary-action">
+            <button class="btn-access" id="accessBtn">
+                <i class="fas fa-arrow-right-to-bracket"></i>
+                <span>一键访问</span>
+                <i class="fas fa-lock-open"></i>
+            </button>
+        </div>
+
+        <!-- 辅助说明 -->
+        <div class="helper-note">
+        </div>
+        <div class="footer-meta">
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知 -->
+<div id="toastMsg" class="toast-message">✨ 已复制</div>
+
+<script>
+    (function() {
+        // 配置数据 (符合题目要求)
+        const DOWNLOAD_URL = "https://wwbqt.lanzout.com/iog4O3mgfnqb";
+        const ACCESS_PWD = "5c22";
+        
+        // DOM 元素
+        const linkTextEl = document.getElementById('downloadLinkText');
+        const pwdTextEl = document.getElementById('passwordText');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const copyPwdBtn = document.getElementById('copyPwdBtn');
+        const accessBtn = document.getElementById('accessBtn');
+        const toastEl = document.getElementById('toastMsg');
+        
+        // 显示toast 封装
+        let toastTimer = null;
+        function showToast(message, isError = false) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toastEl.textContent = message || (isError ? '❌ 操作失败' : '✓ 复制成功');
+            // 错误时改变一下样式风格
+            if (isError) {
+                toastEl.style.background = "rgba(180, 50, 50, 0.9)";
+                toastEl.style.backdropFilter = "blur(12px)";
+            } else {
+                toastEl.style.background = "rgba(0, 0, 0, 0.85)";
+                toastEl.style.backdropFilter = "blur(16px)";
+            }
+            toastEl.classList.add('show');
+            toastTimer = setTimeout(() => {
+                toastEl.classList.remove('show');
+                // 恢复默认背景色（以备下次正常复制）
+                toastEl.style.background = "rgba(0, 0, 0, 0.8)";
+            }, 2000);
+        }
+        
+        // 通用复制文本函数 (现代 Clipboard API)
+        async function copyToClipboard(text, successMsg = "📋 已复制到剪贴板") {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast(successMsg, false);
+                return true;
+            } catch (err) {
+                console.warn('Clipboard error: ', err);
+                // 降级方案: 使用 textarea
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast(successMsg, false);
+                    return true;
+                } catch (fallbackErr) {
+                    showToast('⚠️ 无法复制，请手动选取', true);
+                    return false;
+                }
+            }
+        }
+        
+        // 单独复制链接
+        copyLinkBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await copyToClipboard(DOWNLOAD_URL, '🔗 链接已复制');
+        });
+        
+        // 单独复制密码
+        copyPwdBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await copyToClipboard(ACCESS_PWD, '🔑 密码已复制: ' + ACCESS_PWD);
+        });
+        
+        // 一键访问：复制密码并打开链接 (新窗口)
+        accessBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            // 首先复制密码 (确保用户到达页面后直接粘贴)
+            const copySuccess = await copyToClipboard(ACCESS_PWD, '🔓 密码已就绪，正在打开下载页...');
+            // 打开新窗口/标签页
+            try {
+                // 使用 window.open 打开链接，由于用户主动点击，不会触发拦截
+                const newWindow = window.open(DOWNLOAD_URL, '_blank');
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    // 部分浏览器可能被拦截或阻止弹窗时给出提示
+                    showToast('⚠️ 请允许弹出窗口或手动访问链接', true);
+                } else {
+                    if (copySuccess) {
+                        // 额外小提示：因为已经复制密码，但toast已显示，就不再重复
+                        // 可做可选延迟二次提醒 (无需操作)
+                    }
+                }
+            } catch (err) {
+                console.error('打开窗口失败', err);
+                showToast('❌ 无法自动打开，请复制链接手动访问', true);
+            }
+        });
+        
+        // 可选增强：点击链接文本也可复制？提升体验 (非必须，但贴心)
+        linkTextEl.style.cursor = 'pointer';
+        linkTextEl.title = '点击复制完整链接';
+        linkTextEl.addEventListener('click', async () => {
+            await copyToClipboard(DOWNLOAD_URL, '🔗 链接已复制');
+        });
+        pwdTextEl.style.cursor = 'pointer';
+        pwdTextEl.title = '点击复制密码';
+        pwdTextEl.addEventListener('click', async () => {
+            await copyToClipboard(ACCESS_PWD, '🔑 密码已复制');
+        });
+        
+        // 预置文本内容 (防止任何修改意外)
+        linkTextEl.innerText = DOWNLOAD_URL;
+        pwdTextEl.innerText = ACCESS_PWD;
+        
+        // 增加一些键盘友好: 按回车键聚焦按钮? 不深入，但确保无障碍
+        const btns = [copyLinkBtn, copyPwdBtn, accessBtn];
+        btns.forEach(btn => {
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    btn.click();
+                }
+            });
+        });
+    })();
+</script>
+</body>
+</html>
