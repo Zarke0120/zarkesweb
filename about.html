@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>seazon | Steam Profile Experience</title>
+    <title>Steam Profiles | Experience</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -23,10 +23,52 @@
             background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
             color: #f8fafc;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* 标签栏样式 */
+        .tab-bar {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 资料内容切换 */
+        .profile-content {
+            display: none;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .profile-content.active {
+            display: flex;
         }
 
         /* 磨砂玻璃卡片 */
@@ -42,9 +84,14 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             position: relative;
             overflow: hidden;
+            animation: fadeIn 0.4s ease-out forwards;
         }
 
-        /* 顶部装饰线 - 修复贴合问题 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .profile-card::before {
             content: '';
             position: absolute;
@@ -76,6 +123,7 @@
             border-radius: 15px;
             display: block;
             background: #000;
+            object-fit: cover;
         }
 
         .user-info h1 {
@@ -86,7 +134,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            word-break: break-word;
         }
 
         .level-badge {
@@ -120,13 +167,16 @@
             font-size: 1.4em;
             font-weight: bold;
             color: var(--primary);
+            white-space: nowrap; /* 修复点：强制不换行，防止数字和 Years 断开 */
         }
 
         .stat-label {
+            display: block;
             font-size: 0.8em;
             color: #94a3b8;
             text-transform: uppercase;
             margin-top: 4px;
+            white-space: nowrap;
         }
 
         .bio-section {
@@ -135,17 +185,7 @@
             margin-bottom: 30px;
         }
 
-        .bio-section p {
-            margin: 0 0 12px 0;
-        }
-
-        .bio-section p:last-child {
-            margin-bottom: 0;
-        }
-
         .featured-game {
-            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
-                        url('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/730/capsule_616x353.jpg');
             background-size: cover;
             background-position: center;
             border-radius: 16px;
@@ -153,26 +193,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 15px;
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .game-info h3 { 
-            margin: 0 0 8px 0; 
-            color: #fff; 
-        }
-        .game-time { 
-            font-size: 0.9em; 
-            color: #fbbf24; 
-        }
-
+        .game-info h3 { margin: 0 0 8px 0; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .game-time { font-size: 0.9em; color: #fbbf24; }
+        
         .game-status {
             font-size: 0.8em; 
             background: rgba(34, 197, 94, 0.2); 
             color: #4ade80; 
             padding: 5px 10px; 
             border-radius: 8px;
+            backdrop-filter: blur(4px);
             white-space: nowrap;
+        }
+        
+        .game-status.offline {
+            background: rgba(148, 163, 184, 0.2);
+            color: #cbd5e1;
         }
 
         .badges {
@@ -191,207 +230,153 @@
 
         .badge-icon:hover { transform: translateY(-5px); }
 
-        /* ========== 响应式设计 ========== */
-        
-        /* 平板设备 */
-        @media (max-width: 768px) {
-            .profile-card {
-                padding: 30px 25px;
-            }
-            
-            .avatar {
-                width: 100px;
-                height: 100px;
-            }
-            
-            .user-info h1 {
-                font-size: 2em;
-            }
-            
-            .stats-grid {
-                gap: 15px;
-            }
-            
-            .stat-value {
-                font-size: 1.3em;
-            }
-        }
-
-        /* 手机设备 */
+        /* 响应式适配 - 修复手机端排版 */
         @media (max-width: 640px) {
-            body {
-                padding: 12px;
-                align-items: flex-start;
-                padding-top: 20px;
-                padding-bottom: 20px;
+            .header { flex-direction: column; text-align: center; }
+            .stats-grid { 
+                grid-template-columns: repeat(3, 1fr); 
+                gap: 10px; 
             }
-            
-            .profile-card {
-                padding: 25px 20px;
-                border-radius: 20px;
-            }
-            
-            .header {
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
-            }
-            
-            .avatar-wrapper {
-                margin-right: 0;
-            }
-            
-            .avatar {
-                width: 90px;
-                height: 90px;
-            }
-            
-            .user-info h1 {
-                font-size: 1.75em;
-            }
-            
-            .level-badge {
-                font-size: 0.85em;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-            }
-            
-            .stat-item {
-                padding: 12px 8px;
-            }
-            
-            .stat-value {
-                font-size: 1.2em;
-            }
-            
-            .stat-label {
-                font-size: 0.7em;
-            }
-            
-            .bio-section {
-                font-size: 0.95em;
-            }
-            
-            .featured-game {
-                flex-direction: column;
-                text-align: center;
-                padding: 20px 15px;
-            }
-            
-            .game-info h3 {
-                font-size: 1.1em;
-            }
-            
-            .game-time {
-                font-size: 0.85em;
-            }
-            
-            .badges {
-                justify-content: center;
-                gap: 12px;
-            }
-            
-            .badge-icon {
-                width: 40px;
-                height: 40px;
-            }
+            .stat-item { padding: 12px 8px; }
+            .stat-value { font-size: 1.1em; } /* 缩小手机端字体以适应不换行 */
+            .stat-label { font-size: 0.7em; }
+            .featured-game { flex-direction: column; text-align: center; gap: 15px; }
+            .badges { justify-content: center; }
         }
 
-        /* 小屏手机 */
         @media (max-width: 380px) {
-            .profile-card {
-                padding: 20px 15px;
-            }
-            
-            .avatar {
-                width: 75px;
-                height: 75px;
-            }
-            
-            .avatar-wrapper {
-                border-radius: 16px;
-                padding: 4px;
-            }
-            
-            .avatar {
-                border-radius: 12px;
-            }
-            
-            .user-info h1 {
-                font-size: 1.5em;
-            }
-            
-            .stats-grid {
-                gap: 8px;
-            }
-            
-            .stat-item {
-                padding: 10px 6px;
-                border-radius: 12px;
-            }
-            
-            .stat-value {
-                font-size: 1.1em;
-            }
-            
-            .featured-game {
-                padding: 15px 12px;
-                border-radius: 12px;
-            }
+            .stats-grid { gap: 6px; }
+            .stat-item { padding: 10px 4px; }
+            .stat-value { font-size: 1em; } /* 极小屏幕下进一步缩小 */
+            .stat-label { font-size: 0.65em; }
         }
     </style>
 </head>
 <body>
 
-<div class="profile-card">
-    <div class="header">
-        <div class="avatar-wrapper">
-            <img class="avatar" src="https://avatars.fastly.steamstatic.com/091654896ced9b5cceb336163938350df08b83a8_full.jpg" alt="seazon">
-        </div>
-        <div class="user-info">
-            <h1>seazon</h1>
-            <div class="level-badge">Steam Level 8</div>
-        </div>
-    </div>
+<nav class="tab-bar">
+    <button class="tab-btn active" onclick="showProfile('zarke', this)">ZarKe</button>
+    <button class="tab-btn" onclick="showProfile('seazon', this)">seazon</button>
+    <button class="tab-btn" onclick="showProfile('lwbeit', this)">LwBeit</button>
+</nav>
 
-    <div class="stats-grid">
-        <div class="stat-item">
-            <span class="stat-value">6 Years</span>
-            <span class="stat-label">服役时长</span>
+<div id="zarke" class="profile-content active">
+    <div class="profile-card">
+        <div class="header">
+            <div class="avatar-wrapper">
+                <img class="avatar" src="https://avatars.fastly.steamstatic.com/5d75bc5b2052b695d182a97543bace62ec19644d_full.jpg" alt="ZarKe">
+            </div>
+            <div class="user-info">
+                <h1>ZarKe</h1>
+                <div class="level-badge">Steam Level 5</div>
+            </div>
         </div>
-        <div class="stat-item">
-            <span class="stat-value">39</span>
-            <span class="stat-label">收藏游戏</span>
+        <div class="stats-grid">
+            <div class="stat-item"><span class="stat-value">4 Years</span><span class="stat-label">服役时长</span></div>
+            <div class="stat-item"><span class="stat-value">29</span><span class="stat-label">收藏游戏</span></div>
+            <div class="stat-item"><span class="stat-value">2</span><span class="stat-label">游戏评测</span></div>
         </div>
-        <div class="stat-item">
-            <span class="stat-value">15</span>
-            <span class="stat-label">游戏评测</span>
+        <div class="bio-section">
+            <p>「 枪火为伴，战术为王。 」</p>
+            <p>享受竞技带来的肾上腺素飙升，主攻 Counter-Strike 系列。每一场对局都是对战术与枪法的极致磨砺。期待在 Steam 社区结识更多志同道合的战友。</p>
         </div>
-    </div>
-
-    <div class="bio-section">
-        <p>「 在硝烟中寻找节奏，在六年里沉淀热爱。 」</p>
-        <p>专注于竞技战术对抗，深耕 Counter-Strike 系列。不仅是一名追求极致枪法的玩家，也是一名乐于分享游戏体验的深度评论者。不论是硬核竞技还是独立精品，都在我的收藏清单中熠熠生辉。</p>
-    </div>
-
-    <div class="featured-game">
-        <div class="game-info">
-            <h3>Counter-Strike 2</h3>
-            <span class="game-time">🕒 已游玩 884 小时</span>
+        <div class="featured-game" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/730/capsule_616x353.jpg');">
+            <div class="game-info">
+                <h3>Counter-Strike 2</h3>
+                <span class="game-time">🕒 已游玩 424 小时</span>
+            </div>
+            <div class="game-status">在线状态</div>
         </div>
-        <div class="game-status">正在战斗中</div>
-    </div>
-
-    <div class="badges">
-        <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/02_years/steamyears6_80.png" title="6年服务">
-        <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/13_gamecollector/25_80.png" title="25+游戏收藏">
-        <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/01_community/community02_80.png" title="社区领袖">
-        <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/generic/Replay2022_80.png" title="Steam年度回顾">
+        <div class="badges">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/02_years/steamyears4_80.png" title="4年服务">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/13_gamecollector/25_80.png" title="25+款游戏">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/01_community/community02_80.png" title="社区支柱">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/generic/Replay2022_80.png" title="2022年Steam回顾">
+        </div>
     </div>
 </div>
+
+<div id="seazon" class="profile-content">
+    <div class="profile-card">
+        <div class="header">
+            <div class="avatar-wrapper">
+                <img class="avatar" src="https://avatars.fastly.steamstatic.com/091654896ced9b5cceb336163938350df08b83a8_full.jpg" alt="seazon">
+            </div>
+            <div class="user-info">
+                <h1>seazon</h1>
+                <div class="level-badge">Steam Level 8</div>
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-item"><span class="stat-value">6 Years</span><span class="stat-label">服役时长</span></div>
+            <div class="stat-item"><span class="stat-value">39</span><span class="stat-label">收藏游戏</span></div>
+            <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">游戏评测</span></div>
+        </div>
+        <div class="bio-section">
+            <p>「 在硝烟中寻找节奏，在六年里沉淀热爱。 」</p>
+            <p>专注于竞技战术对抗，深耕 Counter-Strike 系列。不仅是一名追求极致枪法的玩家，也是一名乐于分享游戏体验的深度评论者。不论是硬核竞技还是独立精品，都在我的收藏清单中熠熠生辉。</p>
+        </div>
+        <div class="featured-game" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/730/capsule_616x353.jpg');">
+            <div class="game-info">
+                <h3>Counter-Strike 2</h3>
+                <span class="game-time">🕒 已游玩 884 小时</span>
+            </div>
+            <div class="game-status">正在战斗中</div>
+        </div>
+        <div class="badges">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/02_years/steamyears6_80.png" title="6年服务">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/13_gamecollector/25_80.png" title="25+游戏收藏">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/01_community/community02_80.png" title="社区领袖">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/generic/Replay2022_80.png" title="Steam年度回顾">
+        </div>
+    </div>
+</div>
+
+<div id="lwbeit" class="profile-content">
+    <div class="profile-card">
+        <div class="header">
+            <div class="avatar-wrapper">
+                <img class="avatar" src="https://avatars.fastly.steamstatic.com/738345e90541ec9e092fdad6321ae639eed49e4b_full.jpg" alt="LwBeit">
+            </div>
+            <div class="user-info">
+                <h1>LwBeit</h1>
+                <div class="level-badge">Steam Level 11</div>
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-item"><span class="stat-value">3 Years</span><span class="stat-label">服役时长</span></div>
+            <div class="stat-item"><span class="stat-value">66</span><span class="stat-label">收藏游戏</span></div>
+            <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">游戏评测</span></div>
+        </div>
+        <div class="bio-section">
+            <p>「 探索无界，自由驰骋。 」</p>
+            <p>热爱开放世界与生存探索。从洛圣都的繁华喧嚣，到深海迷航中的未知深渊，享受每一段沉浸式的游戏旅程与冒险。</p>
+        </div>
+        <div class="featured-game" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/271590/capsule_616x353.jpg');">
+            <div class="game-info">
+                <h3>Grand Theft Auto V</h3>
+                <span class="game-time">🕒 已游玩 793 小时</span>
+            </div>
+            <div class="game-status offline">当前离线</div>
+        </div>
+        <div class="badges">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/02_years/steamyears3_80.png" title="3年服务">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/13_gamecollector/50_80.png" title="收藏代理人 (50+款游戏)">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/01_community/community03_80.png" title="社区大使">
+            <img class="badge-icon" src="https://community.fastly.steamstatic.com/public/images/badges/generic/YIR2025_80.png" title="2025年Steam回顾">
+        </div>
+    </div>
+</div>
+
+<script>
+    function showProfile(id, btn) {
+        document.querySelectorAll('.profile-content').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+</script>
 
 </body>
 </html>
