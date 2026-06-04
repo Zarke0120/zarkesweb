@@ -179,10 +179,9 @@
 
     <script>
         (function() {
-            // ========== 手动配置文件列表（如果自动获取失败，将使用此列表） ==========
-            const FALLBACK_FILE_LIST = [
+            // ========== 手动配置文件列表（必须在此处列出所有 txt 文件） ==========
+            const FILE_LIST = [
                 "Novel1.txt",
-                // 添加你的 txt 文件名（相对于 resource 文件夹）
             ];
 
             const RESOURCE_DIR = "resource/novels/";
@@ -218,13 +217,8 @@
             }
 
             // 初始化选择栏并加载第一篇
-            async function init() {
-                // 尝试自动获取
-                let files = await fetchFileListFromDir();
-                if (!files || files.length === 0) {
-                    files = FALLBACK_FILE_LIST;
-                    console.log('使用手动配置的文件列表');
-                }
+            function init() {
+                const files = FILE_LIST;
 
                 // 清空选择框
                 selectEl.innerHTML = '';
@@ -233,7 +227,7 @@
                     selectEl.innerHTML = '<option value="">没有找到任何 txt 文件</option>';
                     titleEl.textContent = '无内容';
                     metaEl.textContent = '';
-                    contentEl.textContent = '请在 resource 文件夹中添加 .txt 文件，或修改页面中的手动列表。';
+                    contentEl.textContent = '请在 FILE_LIST 中添加 .txt 文件名。';
                     return;
                 }
 
