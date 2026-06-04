@@ -3,16 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阅读器</title>
+    <title>Novels</title>
+    <link rel="icon" href="images/R.ico" type="image/x-icon">
     <style>
         :root {
-            --bg: #ffffff;
-            --text: #1a1a1a;
-            --secondary: #6b6b6b;
-            --accent: #333;
-            --border: #e0e0e0;
-            --hover-bg: #f5f5f5;
-            --radius: 10px;
+            --bg: #f7f7f8;
+            --surface: #ffffff;
+            --text: #1d1d1f;
+            --secondary: #86868b;
+            --accent: #1d1d1f;
+            --border: #e5e5e7;
+            --hover-bg: #f0f0f2;
+            --focus-ring: rgba(0,0,0,0.06);
+            --radius: 14px;
+            --radius-sm: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-spring: 0.25s cubic-bezier(0.2, 0, 0, 1.2);
         }
 
         * {
@@ -24,151 +33,281 @@
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            padding: 24px 16px;
+            padding: 32px 20px;
             line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
             width: 100%;
-            max-width: 720px;
+            max-width: 680px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
-        /* 选择栏 */
-        .toolbar {
+        /* ========== 自定义下拉 ========== */
+        .dropdown {
+            position: relative;
+            user-select: none;
+        }
+
+        .dropdown-trigger {
             display: flex;
             align-items: center;
-            background: #fafafa;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 10px 16px;
-        }
-
-        .toolbar label {
-            font-size: 14px;
-            color: var(--secondary);
-            margin-right: 12px;
-            white-space: nowrap;
-            font-weight: 500;
-        }
-
-        .toolbar select {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: #fff;
-            font-size: 14px;
-            color: var(--text);
-            outline: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 10px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            outline: none;
         }
 
-        .toolbar select:focus {
-            border-color: var(--accent);
+        .dropdown-trigger:hover {
+            border-color: #d1d1d3;
         }
 
-        /* 文章卡片 */
+        .dropdown-trigger:focus-visible {
+            border-color: #b8b8ba;
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
+        .dropdown-trigger.active {
+            border-color: #c0c0c2;
+            box-shadow: var(--shadow-md), 0 0 0 3px var(--focus-ring);
+        }
+
+        .dropdown-trigger .label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .dropdown-trigger .label-text {
+            font-size: 13px;
+            color: var(--secondary);
+            font-weight: 500;
+            white-space: nowrap;
+            letter-spacing: -0.01em;
+        }
+
+        .dropdown-trigger .label-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.01em;
+        }
+
+        .dropdown-trigger .chevron {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform var(--transition-spring);
+            color: var(--secondary);
+        }
+
+        .dropdown-trigger.active .chevron {
+            transform: rotate(180deg);
+        }
+
+        /* 下拉面板 */
+        .dropdown-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            padding: 5px;
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(-6px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .dropdown-panel.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background var(--transition);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .dropdown-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .dropdown-item.selected {
+            color: var(--text);
+        }
+
+        .dropdown-item .check {
+            width: 16px;
+            height: 16px;
+            opacity: 0;
+            transition: opacity var(--transition);
+            flex-shrink: 0;
+        }
+
+        .dropdown-item.selected .check {
+            opacity: 1;
+        }
+
+        /* ========== 文章卡片 ========== */
         .article {
-            background: #fff;
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 28px 24px 32px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-            transition: box-shadow 0.2s;
+            padding: 36px 32px 40px;
+            box-shadow: var(--shadow-md);
         }
 
         .article h1 {
-            font-size: 26px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--accent);
-            letter-spacing: -0.3px;
-            line-height: 1.3;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+            letter-spacing: -0.03em;
+            line-height: 1.25;
         }
 
         .article .meta {
             font-size: 13px;
             color: var(--secondary);
-            margin-bottom: 24px;
-            letter-spacing: 0.2px;
+            margin-bottom: 28px;
             font-feature-settings: "tnum";
             font-variant-numeric: tabular-nums;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
         }
 
         .article .content {
             white-space: pre-wrap;
             word-break: break-word;
-            font-size: 16px;
-            letter-spacing: 0.1px;
-            color: #2c2c2c;
-            line-height: 1.8;
+            font-size: 16.5px;
+            letter-spacing: 0.01em;
+            color: #2c2c2e;
+            line-height: 1.85;
+            text-align: justify;
         }
 
         .article .content:empty::after {
             content: "内容加载中…";
-            color: #aaa;
+            color: var(--secondary);
+            font-style: italic;
         }
 
         .error-message {
-            color: #c0392b;
-            background: #fdf2f2;
-            padding: 12px 16px;
-            border-radius: 6px;
-            border: 1px solid #f5c6cb;
+            color: #c42b1c;
+            background: #fef2f1;
+            padding: 14px 18px;
+            border-radius: 8px;
+            border: 1px solid #fdd;
             font-size: 14px;
+            line-height: 1.5;
         }
 
-        /* 移动端优化 */
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d1d3; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #b0b0b3; }
+
+        /* 移动端 */
         @media (max-width: 600px) {
-            body {
-                padding: 16px 12px;
-            }
+            body { padding: 16px 12px; }
 
             .article {
-                padding: 20px 16px 24px;
+                padding: 24px 20px 28px;
+                border-radius: var(--radius-sm);
             }
+            .article h1 { font-size: 23px; }
+            .article .content { font-size: 15.5px; text-align: left; }
 
-            .article h1 {
-                font-size: 22px;
+            .dropdown-panel {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                border-radius: var(--radius) var(--radius) 0 0;
+                transform: translateY(100%);
+                opacity: 1;
+                max-height: 50vh;
+                overflow-y: auto;
+                padding: 8px;
             }
-
-            .article .content {
-                font-size: 15px;
+            .dropdown-panel.open {
+                transform: translateY(0);
             }
+            .dropdown-item { padding: 14px 16px; }
 
-            .toolbar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-                padding: 12px 14px;
+            .dropdown-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.2);
+                z-index: 99;
+                opacity: 0;
+                transition: opacity 0.2s ease;
             }
-
-            .toolbar label {
-                margin-right: 0;
+            .dropdown-overlay.open {
+                display: block;
+                opacity: 1;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="toolbar">
-            <label for="fileSelect">选择文章</label>
-            <select id="fileSelect">
-                <option value="">— 加载文件列表中 —</option>
-            </select>
+        <!-- 自定义下拉 -->
+        <div class="dropdown" id="dropdown">
+            <button class="dropdown-trigger" id="dropdownTrigger" aria-haspopup="listbox" aria-expanded="false">
+                <div class="label">
+                    <span class="label-text">选择文章</span>
+                    <span class="label-value" id="dropdownValue">—</span>
+                </div>
+                <span class="chevron">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M5 7L9 11L13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+            </button>
+            <div class="dropdown-panel" id="dropdownPanel" role="listbox"></div>
         </div>
+
+        <!-- 移动端遮罩 -->
+        <div class="dropdown-overlay" id="dropdownOverlay"></div>
 
         <article class="article">
             <h1 id="articleTitle">文章</h1>
@@ -179,23 +318,94 @@
 
     <script>
         (function() {
-            // ========== 手动配置文件列表（必须在此处列出所有 txt 文件） ==========
             const FILE_LIST = [
                 "Novel1.txt",
             ];
 
             const RESOURCE_DIR = "resource/novels/";
-            const selectEl = document.getElementById('fileSelect');
             const titleEl = document.getElementById('articleTitle');
             const metaEl = document.getElementById('articleMeta');
             const contentEl = document.getElementById('articleContent');
+            const trigger = document.getElementById('dropdownTrigger');
+            const panel = document.getElementById('dropdownPanel');
+            const valueEl = document.getElementById('dropdownValue');
+            const overlay = document.getElementById('dropdownOverlay');
 
-            // 从文件名生成显示标题（去掉 .txt 后缀）
+            let isOpen = false;
+            let selectedIndex = 0;
+
             function titleFromFilename(filename) {
                 return filename.replace(/\.txt$/i, '').replace(/[-_]/g, ' ').trim() || '未命名';
             }
 
-            // 更新UI：加载指定文件
+            // 下拉开关
+            function toggleDropdown(open) {
+                isOpen = typeof open === 'boolean' ? open : !isOpen;
+                trigger.classList.toggle('active', isOpen);
+                panel.classList.toggle('open', isOpen);
+                overlay.classList.toggle('open', isOpen);
+                trigger.setAttribute('aria-expanded', isOpen);
+            }
+
+            // 选择项
+            function selectItem(index) {
+                selectedIndex = index;
+                const filename = FILE_LIST[index];
+                valueEl.textContent = titleFromFilename(filename);
+                // 更新选中标记
+                panel.querySelectorAll('.dropdown-item').forEach((item, i) => {
+                    item.classList.toggle('selected', i === index);
+                });
+                toggleDropdown(false);
+                loadFile(filename);
+            }
+
+            // 构建下拉选项
+            function buildDropdown() {
+                panel.innerHTML = '';
+                const checkSVG = '<svg class="check" viewBox="0 0 16 16" fill="none"><path d="M4 8.5L7 11.5L12 5" stroke="#1d1d1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+                FILE_LIST.forEach((filename, i) => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item' + (i === selectedIndex ? ' selected' : '');
+                    item.role = 'option';
+                    item.setAttribute('aria-selected', i === selectedIndex);
+                    item.innerHTML = `<span>${titleFromFilename(filename)}</span>${checkSVG}`;
+                    item.addEventListener('click', () => selectItem(i));
+                    panel.appendChild(item);
+                });
+
+                if (FILE_LIST.length > 0) {
+                    valueEl.textContent = titleFromFilename(FILE_LIST[0]);
+                } else {
+                    valueEl.textContent = '无文章';
+                }
+            }
+
+            // 事件绑定
+            trigger.addEventListener('click', () => toggleDropdown());
+            overlay.addEventListener('click', () => toggleDropdown(false));
+
+            // 键盘支持
+            trigger.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') toggleDropdown(false);
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!isOpen) { toggleDropdown(true); return; }
+                    const dir = e.key === 'ArrowDown' ? 1 : -1;
+                    const next = (selectedIndex + dir + FILE_LIST.length) % FILE_LIST.length;
+                    selectItem(next);
+                }
+            });
+
+            // 点击外部关闭
+            document.addEventListener('click', (e) => {
+                if (isOpen && !document.getElementById('dropdown').contains(e.target)) {
+                    toggleDropdown(false);
+                }
+            });
+
+            // 加载文件
             async function loadFile(filename) {
                 if (!filename) return;
                 const url = RESOURCE_DIR + filename;
@@ -208,7 +418,7 @@
                     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const text = await resp.text();
                     contentEl.textContent = text;
-                    const count = (text.match(/\S/g) || []).length; // 非空白字符数
+                    const count = (text.match(/\S/g) || []).length;
                     metaEl.textContent = `${count.toLocaleString()} 字`;
                 } catch (err) {
                     contentEl.innerHTML = `<div class="error-message">无法加载文章：${err.message}</div>`;
@@ -216,41 +426,20 @@
                 }
             }
 
-            // 初始化选择栏并加载第一篇
+            // 初始化
             function init() {
-                const files = FILE_LIST;
-
-                // 清空选择框
-                selectEl.innerHTML = '';
-
-                if (files.length === 0) {
-                    selectEl.innerHTML = '<option value="">没有找到任何 txt 文件</option>';
+                if (FILE_LIST.length === 0) {
+                    valueEl.textContent = '无文章';
                     titleEl.textContent = '无内容';
                     metaEl.textContent = '';
                     contentEl.textContent = '请在 FILE_LIST 中添加 .txt 文件名。';
+                    trigger.disabled = true;
+                    trigger.style.opacity = '0.5';
+                    trigger.style.cursor = 'not-allowed';
                     return;
                 }
-
-                // 填充选择框
-                files.forEach(filename => {
-                    const option = document.createElement('option');
-                    option.value = filename;
-                    option.textContent = titleFromFilename(filename);
-                    selectEl.appendChild(option);
-                });
-
-                // 监听选择变化
-                selectEl.addEventListener('change', (e) => {
-                    if (e.target.value) {
-                        loadFile(e.target.value);
-                    }
-                });
-
-                // 默认加载第一个文件
-                if (files[0]) {
-                    selectEl.value = files[0];
-                    loadFile(files[0]);
-                }
+                buildDropdown();
+                loadFile(FILE_LIST[0]);
             }
 
             init();
