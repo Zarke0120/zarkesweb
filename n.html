@@ -217,33 +217,6 @@
                 }
             }
 
-            // 尝试通过请求 resource/ 目录获取文件列表（依赖服务器目录浏览）
-            async function fetchFileListFromDir() {
-                try {
-                    const resp = await fetch(RESOURCE_DIR);
-                    if (!resp.ok) return null;
-                    const html = await resp.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const links = doc.querySelectorAll('a');
-                    const files = [];
-                    links.forEach(link => {
-                        const href = link.getAttribute('href');
-                        if (href && href.endsWith('.txt')) {
-                            // 目录列表中的链接可能是相对于当前resource目录的
-                            const filename = href.split('/').pop(); // 取最后一段
-                            if (filename && !files.includes(filename)) {
-                                files.push(filename);
-                            }
-                        }
-                    });
-                    return files.length > 0 ? files : null;
-                } catch (e) {
-                    console.warn('无法通过目录列表获取文件，将使用手动列表', e);
-                    return null;
-                }
-            }
-
             // 初始化选择栏并加载第一篇
             async function init() {
                 // 尝试自动获取
