@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>静态阅读 · 博客</title>
+    <style>
+        :root {
+            --bg: #faf8f5;
+            --card: #ffffff;
+            --text: #2c2c2c;
+            --accent: #8b6b4d;
+            --border: #e0d6c8;
+            --gold: #b08968;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Serif SC', 'Georgia', 'Times New Roman', serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            line-height: 1.8;
+            background-image: radial-gradient(ellipse at 50% 0%, rgba(139, 107, 77, 0.06) 0%, transparent 70%);
+        }
+
+        .article {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card);
+            border-radius: 18px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--border);
+            padding: 36px 32px 40px;
+            animation: fadeUp 0.6s ease;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .article h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a3724;
+            letter-spacing: 0.5px;
+            border-left: 4px solid var(--gold);
+            padding-left: 16px;
+        }
+
+        .article .meta {
+            font-size: 13px;
+            color: #8b7b6b;
+            margin-bottom: 28px;
+            padding-left: 20px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+        }
+
+        .article .content {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 17px;
+            letter-spacing: 0.2px;
+            color: #3b3b3b;
+            margin-top: 8px;
+        }
+
+        .article .content:empty::after {
+            content: "⌛ 内容加载中…";
+            color: #b0a090;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: #c05a4a;
+            background: #fff5f4;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1px solid #f0d6d2;
+            margin-top: 10px;
+            font-size: 15px;
+        }
+
+        /* 底部小字 */
+        .footer-note {
+            margin-top: 30px;
+            padding-top: 16px;
+            border-top: 1px dashed var(--border);
+            font-size: 11px;
+            color: #b3a18c;
+            text-align: right;
+            font-family: 'SF Mono', 'Consolas', monospace;
+        }
+
+        @media (max-width: 600px) {
+            .article {
+                padding: 24px 18px 30px;
+                border-radius: 12px;
+            }
+            .article h1 {
+                font-size: 22px;
+            }
+            .content {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ★ 在这里修改 href 为你的 txt 文件链接 ★ -->
+    <a id="sourceLink" href="resource/novels/1.txt" style="display:none;" hidden></a>
+
+    <article class="article" id="article">
+        <h1 id="articleTitle">📄 文章标题</h1>
+        <div class="meta" id="articleMeta">正在加载…</div>
+        <div class="content" id="articleContent"></div>
+        <div class="footer-note">— 静态文本阅读 · 修改 href 更换内容 —</div>
+    </article>
+
+    <script>
+        (function() {
+            const sourceLink = document.getElementById('sourceLink');
+            const txtUrl = sourceLink.getAttribute('href') || sourceLink.href;
+
+            const titleEl = document.getElementById('articleTitle');
+            const metaEl = document.getElementById('articleMeta');
+            const contentEl = document.getElementById('articleContent');
+
+            // 从 URL 提取文件名作为标题（简单处理）
+            function getTitleFromUrl(url) {
+                try {
+                    const path = new URL(url).pathname;
+                    const filename = path.split('/').pop() || '';
+                    // 去掉扩展名 .txt
+                    let name = filename.replace(/\.txt$/i, '');
+                    // 将连字符/下划线替换为空格，并首字母大写
+                    name = name.replace(/[-_]/g, ' ');
+                    if (name.trim() === '') return '未命名文章';
+                    return name;
+                } catch {
+                    return '文章';
+                }
+            }
+
+            // 更新界面
+            function showContent(text) {
+                contentEl.textContent = text;
+                const wordCount = text.replace(/\s/g, '').length;
+                metaEl.textContent = `📊 ${wordCount.toLocaleString()} 字 · 已加载`;
+                // 尝试使用 URL 中的文件名作为标题
+                titleEl.textContent = getTitleFromUrl(txtUrl);
+            }
+
+            function showError(errMsg) {
+                contentEl.innerHTML = `<div class="error-message">⚠️ 无法加载文章<br><small>${errMsg}</small></div>`;
+                metaEl.textContent = '加载失败';
+                titleEl.textContent = '📄 文章';
+            }
+
+            // 加载 txt
+            async function loadArticle() {
+                if (!txtUrl || txtUrl === '#' || txtUrl.trim() === '') {
+                    showError('未设置链接，请在 &lt;a&gt; 标签的 href 中填入 txt 文件地址。');
+                    return;
+                }
+
+                metaEl.textContent = '正在加载文章…';
+                try {
+                    const response = await fetch(txtUrl, {
+                        headers: { 'Accept': 'text/plain, */*' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                    }
+
+                    const text = await response.text();
+                    if (!text || text.trim().length === 0) {
+                        throw new Error('文件内容为空');
+                    }
+
+                    showContent(text);
+                } catch (err) {
+                    console.error(err);
+                    showError(err.message);
+                }
+            }
+
+            // 页面加载时自动执行
+            loadArticle();
+        })();
+    </script>
+</body>
+</html>
