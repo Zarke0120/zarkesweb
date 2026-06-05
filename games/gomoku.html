@@ -8,13 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        /* 样式与原版完全相同，保持木质棋盘视觉，省略重复代码节省篇幅，实际与上一版一致 */
+        /* 样式与之前完全一致，保持木质主题，仅加入防止canvas缩放的微小调整 */
         :root {
             --bg:#0c0c10;--bg2:#111118;--card:#17171f;--card-hover:#1d1d28;
             --fg:#eae8e3;--muted:#6e6d78;--accent:#e8a838;--accent2:#f5c96a;
             --border:#26272f;--danger:#ef4444;--success:#22c55e;
         }
-        html {
+         html {
             color-scheme: dark;
         }
         *{margin:0;padding:0;box-sizing:border-box}
@@ -85,7 +85,7 @@
         @keyframes pulse-opacity{0%,100%{opacity:1}50%{opacity:.45}}
         .board-wrap{position:relative;border-radius:12px;overflow:hidden;
             box-shadow:0 12px 28px rgba(0,0,0,.5),0 0 0 1px rgba(232,168,56,.2);
-            margin: 4px auto; max-width: 96vw; display: flex; justify-content: center;}
+            margin: 4px auto; display: flex; justify-content: center; background: #c2923c;}
         .board-wrap canvas{display:block;position:absolute;top:0;left:0}
         .board-wrap canvas:first-child{position:relative}
         #boardOverlay{cursor:default; touch-action: none;}
@@ -213,10 +213,8 @@ let pendingMoves = new Map();
 let isMoving = false;
 let lastPlacedMove = null;
 
-// 防止拒绝悔棋后弹窗闪烁：记录已拒绝的悔棋时间戳
+// 防止拒绝悔棋后弹窗闪烁
 let lastRejectedUndoTs = 0;
-
-// 离开房间标记：防止离开过程中轮询触发结果弹窗
 let isLeaving = false;
 
 let renderedMap = new Map();
@@ -249,57 +247,69 @@ function showPage(id) {
 }
 
 /* ================================================================
-   棋盘尺寸计算 - 保证绝对居中 (修复偏移问题)
+   核心修复：棋盘居中算法与坐标转换（解决真实手机偏移）
    ================================================================ */
 function calcSize() {
-    const container = document.getElementById('boardWrap');
+    // 获取 boardWrap 实际可用 CSS 像素宽度（限制最大宽度）
+    const wrap = document.getElementById('boardWrap');
     const maxWidth = Math.min(window.innerWidth - 24, 760);
     const maxHeight = window.innerHeight - 210;
     let maxBoard = Math.min(maxWidth, maxHeight);
     if (maxBoard < 180) maxBoard = 180;
+
+    // 先根据最大尺寸确定 CELL（格子大小），使得 (BOARD_SIZE-1)*CELL 尽可能大但不溢出
     let rawCell = Math.floor((maxBoard - 20) / (BOARD_SIZE - 1));
     CELL = Math.min(38, Math.max(20, rawCell));
-    let totalGridWidth = (BOARD_SIZE - 1) * CELL;
-    let idealPad = (maxBoard - totalGridWidth) / 2;
-    PAD = Math.max(12, Math.min(maxBoard * 0.1, idealPad));
-    let totalWidth = totalGridWidth + 2 * PAD;
-    if (totalWidth > maxBoard + 2 && CELL > 20) {
+    let gridWidth = (BOARD_SIZE - 1) * CELL;
+    // 计算理想边距：让网格区域在画布里水平垂直居中
+    let idealPad = (maxBoard - gridWidth) / 2;
+    PAD = Math.max(12, Math.min(maxBoard * 0.12, idealPad));
+    // 最终画布总尺寸（物理像素）
+    let totalSize = gridWidth + 2 * PAD;
+    // 如果超出最大限制，微调 CELL 再试一次
+    if (totalSize > maxBoard + 2 && CELL > 20) {
         CELL -= 1;
-        totalGridWidth = (BOARD_SIZE - 1) * CELL;
-        idealPad = (maxBoard - totalGridWidth) / 2;
-        PAD = Math.max(12, Math.min(maxBoard * 0.1, idealPad));
-        totalWidth = totalGridWidth + 2 * PAD;
+        gridWidth = (BOARD_SIZE - 1) * CELL;
+        idealPad = (maxBoard - gridWidth) / 2;
+        PAD = Math.max(12, Math.min(maxBoard * 0.12, idealPad));
+        totalSize = gridWidth + 2 * PAD;
     }
-    PAD = (totalWidth - totalGridWidth) / 2;
+    // 最终确保 PAD 是浮点数以保证绝对居中（但最终 canvas 尺寸使用整数，避免亚像素偏移）
+    PAD = (totalSize - gridWidth) / 2;
+    // 为了让棋盘线对齐，PAD 和 CELL 在绘制时均使用浮点，坐标转换也基于浮点
     SRAD = Math.max(8, Math.min(CELL * 0.47, 18));
+    return totalSize;
 }
 
 function initCanvas() {
-    calcSize();
-    const sz = (BOARD_SIZE - 1) * CELL + 2 * PAD;
-    const finalW = Math.round(sz);
-    const finalH = Math.round(sz);
+    const totalSize = calcSize();
+    const finalSize = Math.round(totalSize); // 取整避免canvas出现半像素
     ['boardBg', 'boardStones', 'boardOverlay'].forEach(id => {
         const c = document.getElementById(id);
-        c.width = finalW;
-        c.height = finalH;
-        c.style.width = finalW + 'px';
-        c.style.height = finalH + 'px';
+        // 设置物理像素尺寸
+        c.width = finalSize;
+        c.height = finalSize;
+        // 强制 CSS 尺寸与物理尺寸一致（防止浏览器缩放）
+        c.style.width = finalSize + 'px';
+        c.style.height = finalSize + 'px';
     });
     drawBg();
 }
 
-/* 纯木头色棋盘 + 深棕网格线 */
+/* 纯木头色棋盘 + 深棕色网格（所有坐标使用浮点，确保精确） */
 function drawBg() {
     const c = document.getElementById('boardBg');
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
+    // 木色渐变背景
     const grad = ctx.createLinearGradient(0, 0, w * 0.3, h);
     grad.addColorStop(0, '#e0b76a');
     grad.addColorStop(0.5, '#cf9f4a');
     grad.addColorStop(1, '#c2923c');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
+    
+    // 极简木纹
     ctx.globalAlpha = 0.08;
     for (let i = 0; i < 60; i++) {
         ctx.beginPath();
@@ -310,6 +320,8 @@ function drawBg() {
         ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    
+    // 绘制网格线（深栗色）
     ctx.beginPath();
     ctx.strokeStyle = '#6b3e1a';
     ctx.lineWidth = 1.8;
@@ -324,6 +336,8 @@ function drawBg() {
         ctx.lineTo(pos, PAD + (BOARD_SIZE - 1) * CELL);
         ctx.stroke();
     }
+    
+    // 星位标记
     const starPoints = [[3,3],[3,9],[3,16],[9,3],[9,9],[9,16],[16,3],[16,9],[16,16]];
     for (const [sx, sy] of starPoints) {
         const cx = PAD + sx * CELL, cy = PAD + sy * CELL;
@@ -336,11 +350,13 @@ function drawBg() {
         ctx.fillStyle = '#e6b468';
         ctx.fill();
     }
+    // 装饰边框
     ctx.strokeStyle = '#ad7a3e';
     ctx.lineWidth = 2;
     ctx.strokeRect(3, 3, w - 6, h - 6);
 }
 
+/* 绘制棋子（立体圆润） */
 function drawStone(x, y, player) {
     const ctx = document.getElementById('boardStones').getContext('2d');
     const cx = PAD + x * CELL, cy = PAD + y * CELL, r = SRAD;
@@ -363,6 +379,7 @@ function drawStone(x, y, player) {
     ctx.strokeStyle = player === 'black' ? '#444' : '#8f8f8f';
     ctx.lineWidth = 0.8;
     ctx.stroke();
+    // 高光
     ctx.beginPath();
     ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.18, 0, Math.PI * 2);
     ctx.fillStyle = player === 'black' ? 'rgba(200,200,200,0.2)' : 'rgba(255,255,255,0.85)';
@@ -402,7 +419,7 @@ function drawOverlay() {
 }
 
 /* ================================================================
-   差异更新 (保留原有逻辑，但修改了lastPlacedMove的处理)
+   差异更新（原样保留，已修复红点回跳）
    ================================================================ */
 function getExpectedMap(serverMoves) {
     const map = new Map();
@@ -440,7 +457,7 @@ function redrawAll(moves) {
     drawOverlay();
 }
 
-/* 大厅逻辑 (完全保留) */
+/* 大厅逻辑（完全保留） */
 async function loadRooms() {
     const data = await api('GET', '/api/rooms/list');
     const box = document.getElementById('roomList');
@@ -513,7 +530,6 @@ async function tick() {
     if (!gameOver && !isLeaving) pollTimer = setTimeout(tick, POLL_MS);
 }
 
-// ======================= 关键修改：修复红点回跳 =======================
 function handleUpdate(d) {
     if (isLeaving) return;
     const sb = document.getElementById('statusBar');
@@ -522,9 +538,7 @@ function handleUpdate(d) {
     updateBoard(d.moves || []);
     if (pendingMoves.size === 0) localTurn = d.turn;
 
-    /* ---------- 修复最后一手红点闪烁 ----------
-       优先使用 pendingMoves 中最新的落子（本地乐观更新的棋子），
-       直到该落子被服务器确认并从 pending 中移除。 */
+    // 修复红点回跳：优先使用 pendingMoves 中最新的落子
     if (pendingMoves.size > 0) {
         let newest = null;
         let newestTs = -1;
@@ -548,7 +562,6 @@ function handleUpdate(d) {
             lastPlacedMove = null;
         }
     }
-    // ---------- 修复结束 ----------
 
     if (d.name) {
         if (myColor === 'black') document.getElementById('nameWhite').textContent = d.name;
@@ -581,7 +594,6 @@ function handleUpdate(d) {
     }
     drawOverlay();
 }
-// ======================= 修复结束 =======================
 
 function tryMove(x, y) {
     if (gameOver || isLeaving || !lastState || lastState.state !== 1) return;
@@ -626,16 +638,26 @@ async function leaveRoom() { if(isLeaving) return; isLeaving=true; stopPoll(); c
 function showResult(icon,title,msg,cls){ document.getElementById('resultIcon').textContent=icon; document.getElementById('resultIcon').className='result-icon '+cls; document.getElementById('resultTitle').textContent=title; document.getElementById('resultMsg').textContent=msg; document.getElementById('resultModal').classList.add('show');}
 function hideResult(){ document.getElementById('resultModal').classList.remove('show');}
 
+/* 修复坐标转换：使用 canvas 物理像素直接计算交叉点 */
 function canvasXY(clientX, clientY) {
-    const c = document.getElementById('boardOverlay');
-    const rect = c.getBoundingClientRect();
-    const sx = c.width / rect.width, sy = c.height / rect.height;
-    const mx = (clientX - rect.left) * sx, my = (clientY - rect.top) * sy;
-    const xRaw = (mx - PAD) / CELL, yRaw = (my - PAD) / CELL;
-    const x = Math.round(xRaw), y = Math.round(yRaw);
+    const canvas = document.getElementById('boardOverlay');
+    const rect = canvas.getBoundingClientRect();
+    // 计算触摸点在 canvas 物理像素中的位置
+    const scaleX = canvas.width / rect.width;   // 物理像素 / CSS像素
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (clientX - rect.left) * scaleX;
+    const canvasY = (clientY - rect.top) * scaleY;
+    // 计算最近的网格交叉点
+    const xRaw = (canvasX - PAD) / CELL;
+    const yRaw = (canvasY - PAD) / CELL;
+    const x = Math.round(xRaw);
+    const y = Math.round(yRaw);
     if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return null;
-    const cx = PAD + x * CELL, cy = PAD + y * CELL;
-    if (Math.hypot(mx - cx, my - cy) > CELL * 0.52) return null;
+    // 验证触摸点是否在棋子半径范围内（提高吸附精度）
+    const crossX = PAD + x * CELL;
+    const crossY = PAD + y * CELL;
+    const dist = Math.hypot(canvasX - crossX, canvasY - crossY);
+    if (dist > SRAD + 5) return null;  // 超出棋子半径过多则忽略
     return { x, y };
 }
 
