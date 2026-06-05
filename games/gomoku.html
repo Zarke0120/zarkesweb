@@ -695,38 +695,34 @@
            棋盘绘制核心 - 绝对居中，无偏移（关键修复）
            ================================================================ */
         function calcGeometry() {
-            // 获取可用最大尺寸（受屏幕限制）
             const maxWidth = Math.min(window.innerWidth - 24, 760);
             const maxHeight = window.innerHeight - 200;
             let maxBoard = Math.min(maxWidth, maxHeight);
             if (maxBoard < 200) maxBoard = 200;
 
-            // 枚举可能的格子大小，选择使边距最均衡的整数CELL
             let bestCell = 26;
             let bestPad = 0;
-            let bestDiff = Infinity;
-            for (let cell = 20; cell <= 40; cell++) {
+            // 从大到小尝试格子大小，确保边距至少12px
+            for (let cell = 40; cell >= 20; cell--) {
                 let gridW = (BOARD_SIZE - 1) * cell;
                 let pad = (maxBoard - gridW) / 2;
-                if (pad >= 12 && pad <= maxBoard * 0.12) {
-                    let total = gridW + 2 * pad;
-                    let diff = Math.abs(total - maxBoard);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestCell = cell;
-                        bestPad = pad;
-                    }
+                if (pad >= 12) {
+                    bestCell = cell;
+                    bestPad = pad;
+                    break;
                 }
             }
             CELL = bestCell;
-            // 最终边距保证网格区域严格居中
-            let gridTotal = (BOARD_SIZE - 1) * CELL;
+            PAD = bestPad;
             let totalSize = maxBoard;
-            PAD = (totalSize - gridTotal) / 2;
-            // 确保PAD为正数且网格不超出边界
+            // 如果边距仍然小于12（例如屏幕太小），强制最小边距并相应缩小格子
             if (PAD < 12) {
-                totalSize = gridTotal + 24;
                 PAD = 12;
+                let maxGrid = maxBoard - 24;
+                CELL = Math.floor(maxGrid / (BOARD_SIZE - 1));
+                if (CELL < 18) CELL = 18;
+                totalSize = (BOARD_SIZE - 1) * CELL + 24;
+                if (totalSize > maxBoard) totalSize = maxBoard;
             }
             SRAD = Math.max(8, Math.min(CELL * 0.45, 18));
             return Math.round(totalSize);
