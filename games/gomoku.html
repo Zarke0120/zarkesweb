@@ -638,7 +638,7 @@
            配置与全局变量（保持原逻辑不变）
            ================================================================ */
         const API_BASE = 'https://gomoku.zarke.ccwu.cc';
-        const BOARD_SIZE = 20;
+        const BOARD_SIZE = 15;
         const POLL_MS = 400;
 
         const uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -743,16 +743,25 @@
 
         function initCanvas() {
             const totalSize = calcGeometry();
-            // 设置三个canvas的物理像素尺寸与CSS尺寸完全一致（1:1映射）
+            const dpr = window.devicePixelRatio || 1; // 获取手机屏幕的高清像素比
+
             ['boardBg', 'boardStones', 'boardOverlay'].forEach(id => {
                 const c = document.getElementById(id);
-                c.width = totalSize;
-                c.height = totalSize;
+                // 物理像素放大 dpr 倍
+                c.width = totalSize * dpr;
+                c.height = totalSize * dpr;
+                // CSS 尺寸保持原始计算出的自适应大小
                 c.style.width = totalSize + 'px';
                 c.style.height = totalSize + 'px';
+
+                // 缩放绘图上下文，这样其他的绘制代码 (坐标、半径等) 都不用改
+                const ctx = c.getContext('2d');
+                ctx.scale(dpr, dpr);
             });
+
             drawBoardBackground();
-            // 清空棋子图层（如果之前有棋子）
+
+            // 清空棋子图层
             const stonesCtx = document.getElementById('boardStones').getContext('2d');
             stonesCtx.clearRect(0, 0, totalSize, totalSize);
             renderedMap.clear();
