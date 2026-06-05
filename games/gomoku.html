@@ -701,44 +701,21 @@
             let maxBoard = Math.min(maxWidth, maxHeight);
             if (maxBoard < 200) maxBoard = 200;
 
-            // 枚举可能的格子大小，选择使边距最均衡的整数CELL
-            // 修复：放宽格子尺寸搜索范围，将下限从 20 调低到 8，并调宽边距系数，确保低分辨率小屏手机下棋盘也能等比例内敛缩放
-            let bestCell = 26;
-            let bestPad = 0;
-            let bestDiff = Infinity;
-            for (let cell = 8; cell <= 40; cell++) {
-                let gridW = (BOARD_SIZE - 1) * cell;
-                let pad = (maxBoard - gridW) / 2;
-                if (pad >= 12 && pad <= maxBoard * 0.15) {
-                    let total = gridW + 2 * pad;
-                    let diff = Math.abs(total - maxBoard);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestCell = cell;
-                        bestPad = pad;
-                    }
-                }
-            }
+            // 直接通过比例分配空间：
+            // 15路棋盘中间有14个格子。我们留出左右各 0.7 个格子的宽度作为边距 (PAD)
+            // 所以总共需要划分的分数是：(BOARD_SIZE - 1) + 1.4
+            CELL = Math.floor(maxBoard / (BOARD_SIZE - 1 + 1.4));
 
-            // 安全兜底：如果屏幕极小导致上面的循环仍然没有匹配到，则直接强制通过数学计算动态求出可容纳的最高格子尺寸
-            if (bestDiff === Infinity) {
-                bestCell = Math.floor((maxBoard - 24) / (BOARD_SIZE - 1));
-                if (bestCell < 6) bestCell = 6;
-            }
+            // 将边距紧凑地固定为 0.7 个格子的宽度
+            PAD = Math.floor(CELL * 0.7);
 
-            CELL = bestCell;
-            // 最终边距保证网格区域严格居中
-            let gridTotal = (BOARD_SIZE - 1) * CELL;
-            let totalSize = maxBoard;
-            PAD = (totalSize - gridTotal) / 2;
-            // 确保PAD为正数且网格不超出边界
-            if (PAD < 12) {
-                totalSize = gridTotal + 24;
-                PAD = 12;
-            }
-            // 修复：同步将棋子的最小安全半径下限从 8 像素调低到 6 像素，避免在手机端超小格子时棋子发生黏连重叠
-            SRAD = Math.max(6, Math.min(CELL * 0.45, 18));
-            return Math.round(totalSize);
+            // 重新推算棋盘总物理尺寸
+            let totalSize = (BOARD_SIZE - 1) * CELL + PAD * 2;
+
+            // 动态计算棋子半径，确保不会显得太小
+            SRAD = Math.max(6, Math.floor(CELL * 0.43));
+
+            return totalSize;
         }
 
         function initCanvas() {
@@ -809,7 +786,7 @@
             }
 
             // 星位标记
-            const starPoints = [[3, 3], [3, 9], [3, 16], [9, 3], [9, 9], [9, 16], [16, 3], [16, 9], [16, 16]];
+            const starPoints = [[3, 3], [3, 11], [7, 7], [11, 3], [11, 11]];
             for (const [sx, sy] of starPoints) {
                 const cx = PAD + sx * CELL, cy = PAD + sy * CELL;
                 ctx.beginPath();
