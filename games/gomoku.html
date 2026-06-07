@@ -665,8 +665,8 @@
         let pollTimer = null;
         let lastState = null;
         let gameOver = false;
+        let undoCooldown = false; // 悔棋冷却
         let undoModalOpen = false;
-        let undoLocked = false;   // 悔棋按钮冷却锁定
 
         let localTurn = null;
         let pendingMoves = new Map();
@@ -977,8 +977,8 @@
             showPage('game-page');
             gameOver = false;
             undoModalOpen = false;
+            undoCooldown = false;
             isLeaving = false;
-            undoLocked = false;
             renderedMap = new Map();
             lastState = null;
             pendingMoves = new Map();
@@ -1062,7 +1062,7 @@
                 wh.classList.toggle('is-turn', localTurn === 'white');
                 sb.textContent = myTurn ? '轮到你落子' : '等待对手落子';
                 sb.style.color = myTurn ? 'var(--accent)' : 'var(--muted)';
-                updateUndoButton();
+                const canUndo = (d.moves || []).length >= 2 && !d.undoRequest && pendingMoves.size === 0 && !undoCooldown;
                 document.getElementById('btnUndo').disabled = !canUndo;
                 if (d.undoRequest && d.undoRequest.from !== myColor) {
                     const reqTs = d.undoRequest.timestamp || 0;
@@ -1122,28 +1122,20 @@
             sb.style.color = myTurn ? 'var(--accent)' : 'var(--muted)';
         }
 
-        function updateUndoButton() {
-            const btn = document.getElementById('btnUndo');
-            if (!btn) return;
-            const canUndo = !undoLocked
-                && lastState?.state === 1
-                && (lastState.moves || []).length >= 2
-                && !lastState.undoRequest
-                && pendingMoves.size === 0;
-            btn.disabled = !canUndo;
-        }
         function requestUndo() {
-            if (undoLocked) return;
-            if (!(lastState?.state === 1 && !lastState.undoRequest && pendingMoves.size === 0)) return;
-            undoLocked = true;
+            if (undoCooldown || !lastState || lastState.state !== 1 || lastState.undoRequest || pendingMoves.size > 0) return;
+            undoCooldown = true;
             document.getElementById('btnUndo').disabled = true;
             api('POST', '/api/actions/undo-request', { roomId, userID: uid }).then(d => {
                 if (d.success) toast('已发送悔棋请求', 'info');
                 else toast(d.message, 'err');
             }).finally(() => {
                 setTimeout(() => {
-                    undoLocked = false;
-                    updateUndoButton();   // 冷却结束，重新评估按钮状态
+                    undoCooldown = false;
+                    // 3秒后重新评估按钮状态
+                    if (lastState && lastState.state === 1 && !lastState.undoRequest && pendingMoves.size === 0 && (lastState.moves || []).length >= 2) {
+                        document.getElementById('btnUndo').disabled = false;
+                    }
                 }, 3000);
             });
         }
@@ -1188,7 +1180,7 @@
             showPage('lobby-page');
             loadRooms();
             toast('已退出房间', 'ok');
-            undoLocked = false;
+            undoCooldown = false;
             isLeaving = false;
         }
 
