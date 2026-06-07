@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋后台管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0e0e10', card: '#1c1c1e', surface: '#2c2c2e',
+                        border: '#3a3a3c', fg: '#f5f5f7', muted: '#8e8e93',
+                        accent: '#e8a838', danger: '#ff453a', success: '#30d158',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        *{font-family:'Noto Sans SC',sans-serif;box-sizing:border-box}
+        body{background:#0e0e10;color:#f5f5f7;margin:0}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-track{background:#1c1c1e}
+        ::-webkit-scrollbar-thumb{background:#3a3a3c;border-radius:3px}
+        select,input[type="text"],input[type="number"],input[type="password"]{
+            background:#2c2c2e;border:1px solid #3a3a3c;color:#f5f5f7;
+            padding:7px 10px;border-radius:6px;outline:none;font-size:13px;
+            transition:border-color .2s;
+        }
+        select:focus,input:focus{border-color:#e8a838}
+        .room-card{transition:all .2s ease}
+        .room-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);border-color:#e8a838}
+        @keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(30px)}}
+        .toast-anim{animation:toastIn .3s ease,toastOut .3s ease 2.5s forwards}
+        @keyframes modalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+        .modal-in{animation:modalIn .25s ease}
+    </style>
+</head>
+<body class="min-h-screen">
+
+<!-- 登录弹窗 -->
+<div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,.7);backdrop-filter:blur(8px)">
+    <div class="modal-in bg-card border border-border rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl">
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 rounded-2xl bg-accent/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-chess-board text-accent text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-black tracking-tight">五子棋管理</h1>
+            <p class="text-muted text-sm mt-1">请输入密码以访问后台</p>
+        </div>
+        <div class="space-y-3">
+            <input id="pwdInput" type="password" placeholder="管理密码" class="w-full" onkeydown="if(event.key==='Enter')login()">
+            <button onclick="login()" class="w-full py-2.5 bg-accent hover:bg-amber-500 text-bg font-bold rounded-lg transition">登 录</button>
+        </div>
+    </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background:rgba(0,0,0,.6);backdrop-filter:blur(4px)">
+    <div class="modal-in bg-card border border-border rounded-2xl p-6 w-full max-w-xs mx-4 shadow-2xl text-center">
+        <i class="fas fa-exclamation-triangle text-danger text-3xl mb-3"></i>
+        <p id="confirmMsg" class="mb-5 text-sm"></p>
+        <div class="flex gap-3">
+            <button id="confirmCancel" class="flex-1 py-2 bg-surface hover:bg-border rounded-lg text-sm transition">取消</button>
+            <button id="confirmOk" class="flex-1 py-2 bg-danger/80 hover:bg-danger rounded-lg text-sm font-bold transition">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 主应用 -->
+<div id="app" class="hidden min-h-screen flex flex-col">
+    <!-- 顶栏 -->
+    <header class="sticky top-0 z-40 bg-bg/80 border-b border-border" style="backdrop-filter:blur(12px)">
+        <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-chess-board text-accent"></i>
+                <span class="font-bold text-lg">五子棋管理</span>
+            </div>
+            <button onclick="logout()" class="text-muted hover:text-danger text-sm transition"><i class="fas fa-sign-out-alt mr-1"></i>退出</button>
+        </div>
+    </header>
+
+    <!-- 列表视图 -->
+    <div id="listView" class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+        <div class="flex items-center justify-between mb-4">
+            <div id="statsHtml" class="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1"></div>
+            <button onclick="loadRooms();fetchUsage()" class="ml-4 text-muted hover:text-accent transition text-lg"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        
+        <!-- Worker Usage 进度条 -->
+        <div class="bg-card rounded-xl p-4 border border-border mb-5">
+            <div class="flex justify-between text-xs text-muted mb-1.5">
+                <span>Worker 请求用量</span>
+                <span><span id="usageRequests">0</span> / 100,000</span>
+            </div>
+            <div class="w-full bg-surface rounded-full h-2">
+                <div id="usageBar" class="bg-accent h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div id="roomsHtml" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- 详情视图 -->
+    <div id="detailView" class="hidden flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+        <div id="detailHeader" class="flex items-center flex-wrap gap-2 mb-5"></div>
+        <div class="flex flex-col lg:flex-row gap-6 w-full">
+            <div class="flex-shrink-0 w-full lg:w-1/2">
+                <div id="boardContainer" class="flex justify-center"><canvas id="boardCanvas"></canvas></div>
+                <div id="boardInfo" class="mt-3 text-center text-sm text-muted"></div>
+            </div>
+            <div id="editPanel" class="flex-1 w-full lg:w-1/2 space-y-4 min-w-0 max-w-xl overflow-y-auto" style="max-height: calc(100vh - 120px);"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 容器 -->
+<div id="toastBox" class="fixed top-4 right-4 z-50 space-y-2" style="max-width:320px"></div>
+
+<script>
+// ========== 状态 ==========
+let password = '', apiBase = 'https://gomoku-admin.zarke.ccwu.cc', rooms = [], stats = {total:0,waiting:0,playing:0,ended:0};
+let currentRoom = null, filterState = -1, placeColor = 'black', editMode = 'add';
+let boardCfg = {cellSize:30, padding:20};
+let pollTimer = null;
+let hoverPos = null; // 记录鼠标悬停的网格坐标
+
+// ========== 工具函数 ==========
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const stateText = s => ['等待中','进行中','已结束'][s]||'未知';
+const stateCls = s => ['bg-yellow-500/20 text-yellow-300','bg-green-500/20 text-green-400','bg-gray-500/20 text-gray-400'][s]||'';
+const turnText = t => t==='black'?'黑方':'白方';
+const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+
+// ========== Toast ==========
+function toast(msg, type='info'){
+    const box=document.getElementById('toastBox');
+    const colors={info:'border-accent',success:'border-success',error:'border-danger'};
+    const icons={info:'fa-info-circle text-accent',success:'fa-check-circle text-success',error:'fa-times-circle text-danger'};
+    const el=document.createElement('div');
+    el.className=`toast-anim bg-card border-l-4 ${colors[type]||colors.info} px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 text-sm`;
+    el.innerHTML=`<i class="fas ${icons[type]||icons.info}"></i><span>${msg}</span>`;
+    box.appendChild(el);
+    setTimeout(()=>el.remove(),3000);
+}
+
+// ========== 确认弹窗 ==========
+function showConfirm(msg, onOk){
+    const m=document.getElementById('confirmModal');
+    document.getElementById('confirmMsg').textContent=msg;
+    m.classList.remove('hidden');
+    document.getElementById('confirmOk').onclick=()=>{m.classList.add('hidden');onOk()};
+    document.getElementById('confirmCancel').onclick=()=>m.classList.add('hidden');
+}
+
+// ========== API ==========
+async function api(path, body={}){
+    try{
+        const res=await fetch(apiBase+path,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({...body, password})
+        });
+        return await res.json();
+    }catch(e){
+        return {success:false, message:'网络请求失败: '+e.message};
+    }
+}
+
+// ========== 登录 / 退出 ==========
+async function login(){
+    const pwd=document.getElementById('pwdInput').value;
+    if(!pwd){toast('请输入密码','error');return}
+    password=pwd;
+    const res=await api('/api/admin/rooms/stats');
+    if(res.success){
+        document.getElementById('loginModal').style.display='none';
+        document.getElementById('app').classList.remove('hidden');
+        loadRooms();
+        fetchUsage();
+    }else{
+        toast(res.message||'认证失败','error');
+        password='';
+    }
+}
+function logout(){
+    password='';currentRoom=null;rooms=[];
+    clearInterval(pollTimer);
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginModal').style.display='';
+    document.getElementById('pwdInput').value='';
+}
+
+// ========== Usage 获取 ==========
+async function fetchUsage() {
+    try {
+        const res = await fetch('https://gomoku.zarke.ccwu.cc/api/usage');
+        const data = await res.json();
+        const requests = (data && data.success && typeof data.requests === 'number') ? data.requests : 0;
+        const MAX = 100000;
+        const percent = Math.min(100, Math.round((requests / MAX) * 100));
+        document.getElementById('usageRequests').textContent = requests.toLocaleString();
+        document.getElementById('usageBar').style.width = percent + '%';
+    } catch (e) {
+        console.warn('获取usage失败', e);
+    }
+}
+
+// ========== 加载列表 ==========
+async function loadRooms(){
+    const [lr,sr]=await Promise.all([api('/api/admin/rooms/list'),api('/api/admin/rooms/stats')]);
+    if(lr.success) rooms=lr.rooms;
+    if(sr.success) stats=sr.stats;
+    renderList();
+}
+
+// ========== 渲染列表 ==========
+function renderList(){
+    const filtered=filterState===-1?rooms:rooms.filter(r=>r.state===filterState);
+    document.getElementById('statsHtml').innerHTML=[
+        {s:-1,l:'总计',v:stats.total,c:'text-accent'},
+        {s:0,l:'等待',v:stats.waiting,c:'text-yellow-400'},
+        {s:1,l:'进行中',v:stats.playing,c:'text-green-400'},
+        {s:2,l:'已结束',v:stats.ended,c:'text-gray-400'},
+    ].map(st=>`<div onclick="filterState=${st.s};renderList()" class="bg-card rounded-xl p-4 border cursor-pointer transition ${filterState===st.s?'border-accent ring-1 ring-accent':'border-border hover:border-muted'}">
+        <div class="text-2xl font-black ${st.c}">${st.v}</div><div class="text-muted text-xs mt-1">${st.l}</div>
+    </div>`).join('');
+    
+    if(!filtered.length){
+        document.getElementById('roomsHtml').innerHTML=`<div class="col-span-full text-center py-20 text-muted"><i class="fas fa-chess-board text-4xl mb-3 block opacity-30"></i>暂无对局</div>`;
+        return;
+    }
+    document.getElementById('roomsHtml').innerHTML=filtered.map(r=>`
+    <div class="room-card bg-card rounded-xl p-5 border border-border cursor-pointer" onclick="openDetail('${esc(r.roomId)}')">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold truncate mr-2">${esc(r.roomName||r.roomId)}</h3>
+            <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${stateCls(r.state)}">${stateText(r.state)}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm mb-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-700 inline-block border border-gray-600"></span>${esc(r.blackName)||'—'}</span>
+            <span class="text-muted text-xs">VS</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-100 inline-block border border-gray-300"></span>${esc(r.whiteName)||'—'}</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-muted">
+            <span><i class="far fa-clock mr-1"></i>${fmtTime(r.createdAt)}</span>
+        </div>
+    </div>`).join('');
+}
+
+// ========== 详情页 ==========
+async function openDetail(roomId){
+    document.getElementById('listView').classList.add('hidden');
+    document.getElementById('detailView').classList.remove('hidden');
+    clearInterval(pollTimer);
+    await loadDetail(roomId);
+    pollTimer = setInterval(() => loadDetail(roomId, true), 400);
+}
+
+async function loadDetail(roomId, silent = false){
+    const res=await api('/api/admin/rooms/detail',{roomId});
+    if(res.success){
+        currentRoom=res.room;
+        placeColor=currentRoom.turn||'black';
+        renderDetail(silent);
+    } else {
+        toast(res.message||'加载失败，返回首页','error');
+        goBack(); // 请求失败，自动退出详情页并返回列表
+    }
+}
+
+
+function goBack(){
+    clearInterval(pollTimer);
+    hoverPos = null;
+    document.getElementById('detailView').classList.add('hidden');
+    document.getElementById('listView').classList.remove('hidden');
+    loadRooms();
+}
+
+function renderDetail(silent = false){
+    const r=currentRoom; if(!r) return;
+    
+    if(!silent) {
+        document.getElementById('detailHeader').innerHTML=`
+            <button onclick="goBack()" class="text-muted hover:text-fg transition text-lg"><i class="fas fa-arrow-left"></i></button>
+            <h2 class="text-lg font-bold truncate">${esc(r.roomName||r.roomId)}</h2>
+            <span id="detailState" class="px-2 py-0.5 rounded text-xs font-medium ${stateCls(r.state)}">${stateText(r.state)}</span>
+            <span class="text-xs text-muted font-mono">${esc(r.roomId)}</span>
+        `;
+        renderEditPanel(); // 首次加载完整渲染面板
+    } else {
+        // 静默精准更新，防止输入框闪烁或重置
+        const stateEl = document.getElementById('detailState');
+        if(stateEl) {
+            stateEl.className = `px-2 py-0.5 rounded text-xs font-medium ${stateCls(r.state)}`;
+            stateEl.textContent = stateText(r.state);
+        }
+        const turnTextEl = document.getElementById('currentTurnText');
+        if(turnTextEl) {
+            turnTextEl.className = `text-sm font-bold ${r.turn==='black'?'text-gray-300':'text-white'}`;
+            turnTextEl.textContent = turnText(r.turn);
+        }
+        const bnEl = document.getElementById('blackNameText');
+        if(bnEl) bnEl.textContent = esc(r.blackName) || '—';
+        const wnEl = document.getElementById('whiteNameText');
+        if(wnEl) wnEl.textContent = esc(r.whiteName) || '—';
+        
+        const undoEl = document.getElementById('undoRequestArea');
+        if(undoEl) {
+            if(r.undoRequest) {
+                undoEl.innerHTML = `<span class="text-sm">${turnText(r.undoRequest.from)} 请求悔棋 <span class="text-xs text-muted">${fmtTime(r.undoRequest.timestamp)}</span></span>
+                <button onclick="clearUndo()" class="px-3 py-1 bg-surface hover:bg-border rounded text-sm transition">清除</button>`;
+            } else {
+                undoEl.innerHTML = `<p class="text-sm text-muted">当前无悔棋请求</p>`;
+            }
+        }
+        
+        const winSel = document.getElementById('winnerSelect');
+        if(winSel) {
+            winSel.value = r.winner === null ? "" : r.winner;
+        }
+    }
+
+    drawBoard();
+    document.getElementById('boardInfo').innerHTML=`
+        当前回合：<b class="${r.turn==='black'?'text-gray-300':'text-white'}">${turnText(r.turn)}</b>
+        &nbsp;·&nbsp; 第 <b class="text-accent">${r.moves.length}</b> 手
+        ${r.winner?` · <b class="text-success">${turnText(r.winner)}胜</b>`:''}
+    `;
+}
+
+// ========== 棋盘绘制 ==========
+function drawBoard(){
+    const canvas=document.getElementById('boardCanvas');
+    const cw=document.getElementById('boardContainer').clientWidth;
+    const size=15, cellSize=Math.floor((cw-40)/(size-1)), pad=20;
+    const bSize=cellSize*(size-1)+pad*2;
+    canvas.width=bSize; canvas.height=bSize;
+    boardCfg={cellSize,padding:pad};
+    const ctx=canvas.getContext('2d');
+    
+    ctx.fillStyle='#d4a843'; ctx.fillRect(0,0,bSize,bSize);
+    ctx.strokeStyle='#6b5a2e'; ctx.lineWidth=1;
+    for(let i=0;i<size;i++){
+        ctx.beginPath();ctx.moveTo(pad+i*cellSize,pad);ctx.lineTo(pad+i*cellSize,pad+(size-1)*cellSize);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(pad,pad+i*cellSize);ctx.lineTo(pad+(size-1)*cellSize,pad+i*cellSize);ctx.stroke();
+    }
+    [3,7,11].forEach(sx=>[3,7,11].forEach(sy=>{
+        ctx.fillStyle='#6b5a2e';ctx.beginPath();ctx.arc(pad+sx*cellSize,pad+sy*cellSize,Math.max(3,cellSize*.1),0,Math.PI*2);ctx.fill();
+    }));
+    
+    const rr=cellSize*.42;
+    const r = currentRoom;
+    r.moves.forEach((mv,idx)=>{
+        const x=pad+mv.x*cellSize, y=pad+mv.y*cellSize;
+        ctx.save();
+        ctx.shadowColor='rgba(0,0,0,.35)';ctx.shadowBlur=4;ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;
+        ctx.beginPath();ctx.arc(x,y,rr,0,Math.PI*2);
+        if(mv.player==='black'){
+            const g=ctx.createRadialGradient(x-rr*.3,y-rr*.3,rr*.1,x,y,rr);
+            g.addColorStop(0,'#555555');g.addColorStop(1,'#111111');ctx.fillStyle=g;
+        }else{
+            const g=ctx.createRadialGradient(x-rr*.3,y-rr*.3,rr*.1,x,y,rr);
+            g.addColorStop(0,'#ffffff');g.addColorStop(1,'#c8c8c8');ctx.fillStyle=g;
+        }
+        ctx.fill();ctx.restore();
+        if(idx===r.moves.length-1){
+            ctx.fillStyle='#ff453a';ctx.beginPath();ctx.arc(x,y,rr*.25,0,Math.PI*2);ctx.fill();
+        }
+    });
+
+    // 绘制鼠标悬停提示
+    if(hoverPos) {
+        const hx = pad + hoverPos.x * cellSize;
+        const hy = pad + hoverPos.y * cellSize;
+        const hasPiece = r.moves.some(m => m.x === hoverPos.x && m.y === hoverPos.y);
+
+        if(editMode === 'add' && !hasPiece) {
+            ctx.beginPath();ctx.arc(hx, hy, rr, 0, Math.PI*2);
+            ctx.fillStyle = placeColor === 'black' ? 'rgba(30,30,30,0.5)' : 'rgba(255,255,255,0.5)';
+            ctx.fill();
+            ctx.strokeStyle = placeColor === 'black' ? 'rgba(0,0,0,0.8)' : 'rgba(200,200,200,0.8)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        } else if(editMode === 'remove' && hasPiece) {
+            ctx.fillStyle = 'rgba(255, 69, 58, 0.4)'; // 红色半透明方块
+            ctx.fillRect(hx - cellSize/2, hy - cellSize/2, cellSize, cellSize);
+            // 红色叉叉
+            ctx.strokeStyle = 'rgba(255, 69, 58, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(hx - cellSize/4, hy - cellSize/4);
+            ctx.lineTo(hx + cellSize/4, hy + cellSize/4);
+            ctx.moveTo(hx + cellSize/4, hy - cellSize/4);
+            ctx.lineTo(hx - cellSize/4, hy + cellSize/4);
+            ctx.stroke();
+        }
+    }
+
+    ctx.fillStyle='#6b5a2e';ctx.font=`${Math.max(9,cellSize*.32)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(let i=0;i<size;i++){
+        ctx.fillText(String.fromCharCode(65+i),pad+i*cellSize,pad-cellSize*.6);
+        ctx.fillText(i+1,pad-cellSize*.6,pad+i*cellSize);
+    }
+}
+
+// 计算鼠标位置对应的网格坐标
+function getGridPos(e) {
+    const canvas = document.getElementById('boardCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+    const gx = Math.round((mx - boardCfg.padding) / boardCfg.cellSize);
+    const gy = Math.round((my - boardCfg.padding) / boardCfg.cellSize);
+    if(gx >= 0 && gx < 15 && gy >= 0 && gy < 15) {
+        return {x: gx, y: gy};
+    }
+    return null;
+}
+
+// 棋盘点击
+document.getElementById('boardCanvas').addEventListener('click', function(e){
+    if(!currentRoom) return;
+    const pos = getGridPos(e);
+    if(!pos) return;
+
+    if(editMode === 'add') {
+        if(currentRoom.moves.some(m=>m.x===pos.x&&m.y===pos.y)){toast('该位置已有棋子','error');return}
+        addMove(pos.x, pos.y);
+    } else if(editMode === 'remove') {
+        if(!currentRoom.moves.some(m=>m.x===pos.x&&m.y===pos.y)){toast('该位置无棋子','error');return}
+        showConfirm(`确定删除 ${String.fromCharCode(65+pos.x)}${pos.y+1} 处的棋子？`, async () => {
+            const newMoves = currentRoom.moves.filter(m => !(m.x === pos.x && m.y === pos.y));
+            const res = await api('/api/admin/edit/moves', {roomId: currentRoom.roomId, moves: newMoves});
+            if(res.success) toast('已删除棋子','success');
+            else toast(res.message||'删除失败','error');
+        });
+    }
+});
+
+// 棋盘鼠标移动 (吸附提示)
+document.getElementById('boardCanvas').addEventListener('mousemove', function(e){
+    if(!currentRoom) return;
+    const newPos = getGridPos(e);
+    // 只有当网格坐标改变时才重绘，优化性能
+    if(!hoverPos || !newPos || hoverPos.x !== newPos.x || hoverPos.y !== newPos.y) {
+        hoverPos = newPos;
+        drawBoard();
+    }
+});
+
+// 棋盘鼠标移出
+document.getElementById('boardCanvas').addEventListener('mouseleave', function(e){
+    if(hoverPos !== null) {
+        hoverPos = null;
+        drawBoard();
+    }
+});
+
+async function addMove(x,y){
+    const res=await api('/api/admin/edit/moves/add',{roomId:currentRoom.roomId,move:{player:placeColor,x,y}});
+    if(res.success){toast(`落子 ${String.fromCharCode(65+x)}${y+1}`,'success');}
+    else toast(res.message||'落子失败','error');
+}
+
+// ========== 编辑面板 ==========
+function renderEditPanel(){
+    const r=currentRoom;
+    document.getElementById('editPanel').innerHTML=`
+    <!-- 基本设置 -->
+    <div class="bg-card rounded-xl p-5 border border-border">
+        <h3 class="font-bold text-accent text-sm mb-4"><i class="fas fa-sliders-h mr-2"></i>基本设置</h3>
+        <div class="space-y-3">
+            ${fieldRow('房间名',`<span class="text-sm">${esc(r.roomName||r.roomId)}</span>`)}
+            ${fieldRow('回合',`<span id="currentTurnText" class="text-sm font-bold ${r.turn==='black'?'text-gray-300':'text-white'}">${turnText(r.turn)}</span>`)}
+            ${fieldRow('赢家',`<select id="winnerSelect" class="flex-1" onchange="editWinner(this.value)">
+                <option value="" ${r.winner===null?'selected':''}>无</option>
+                <option value="black" ${r.winner==='black'?'selected':''}>黑方</option>
+                <option value="white" ${r.winner==='white'?'selected':''}>白方</option>
+            </select>`)}
+        </div>
+    </div>
+    <!-- 落子操作 -->
+    <div class="bg-card rounded-xl p-5 border border-border">
+        <h3 class="font-bold text-accent text-sm mb-4"><i class="fas fa-crosshairs mr-2"></i>棋盘操作</h3>
+        <div class="space-y-3">
+            ${fieldRow('操作模式',`<div class="flex gap-2">
+                <button onclick="editMode='add';hoverPos=null;renderEditPanel()" class="px-3 py-1 rounded text-sm font-medium transition ${editMode==='add'?'bg-accent text-bg ring-2 ring-accent':'bg-surface text-muted hover:text-fg'}">添加</button>
+                <button onclick="editMode='remove';hoverPos=null;renderEditPanel()" class="px-3 py-1 rounded text-sm font-medium transition ${editMode==='remove'?'bg-danger text-white ring-2 ring-danger':'bg-surface text-muted hover:text-fg'}">删除</button>
+            </div>`)}
+            ${editMode === 'add' ? fieldRow('落子颜色',`<div class="flex gap-2">
+                <button onclick="placeColor='black';renderEditPanel()" class="px-3 py-1 rounded text-sm font-medium transition ${placeColor==='black'?'bg-gray-800 text-white ring-2 ring-accent':'bg-surface text-muted hover:text-fg'}">黑</button>
+                <button onclick="placeColor='white';renderEditPanel()" class="px-3 py-1 rounded text-sm font-medium transition ${placeColor==='white'?'bg-white text-black ring-2 ring-accent':'bg-surface text-muted hover:text-fg'}">白</button>
+            </div>`) : ''}
+            <p class="text-xs text-muted">${editMode === 'add' ? '点击棋盘空位直接落子' : '点击棋盘上的棋子进行删除'}</p>
+        </div>
+    </div>
+    <!-- 黑方 -->
+    <div class="bg-card rounded-xl p-5 border border-border">
+        <h3 class="font-bold text-sm mb-4"><span class="inline-block w-3.5 h-3.5 rounded-full bg-gray-800 border border-gray-600 mr-2 align-middle"></span>黑方</h3>
+        <div class="space-y-3">
+            ${fieldRow('名字',`<span id="blackNameText" class="text-sm">${esc(r.blackName)||'—'}</span>`)}
+        </div>
+    </div>
+    <!-- 白方 -->
+    <div class="bg-card rounded-xl p-5 border border-border">
+        <h3 class="font-bold text-sm mb-4"><span class="inline-block w-3.5 h-3.5 rounded-full bg-white border border-gray-300 mr-2 align-middle"></span>白方</h3>
+        <div class="space-y-3">
+            ${fieldRow('名字',`<span id="whiteNameText" class="text-sm">${esc(r.whiteName)||'—'}</span>`)}
+        </div>
+    </div>
+    <!-- 悔棋 -->
+    <div class="bg-card rounded-xl p-5 border border-border">
+        <h3 class="font-bold text-accent text-sm mb-4"><i class="fas fa-undo mr-2"></i>悔棋请求</h3>
+        <div id="undoRequestArea" class="flex items-center justify-between">
+            ${r.undoRequest?`<span class="text-sm">${turnText(r.undoRequest.from)} 请求悔棋 <span class="text-xs text-muted">${fmtTime(r.undoRequest.timestamp)}</span></span>
+            <button onclick="clearUndo()" class="px-3 py-1 bg-surface hover:bg-border rounded text-sm transition">清除</button>`:`<p class="text-sm text-muted">当前无悔棋请求</p>`}
+        </div>
+    </div>
+    <!-- 危险 -->
+    <div class="bg-card rounded-xl p-5 border border-danger/30">
+        <h3 class="font-bold text-danger text-sm mb-4"><i class="fas fa-skull-crossbones mr-2"></i>危险区域</h3>
+        <button onclick="delRoom()" class="w-full py-2 bg-danger/15 hover:bg-danger/30 text-danger rounded-lg transition font-medium text-sm">删除此房间</button>
+    </div>`;
+}
+
+function fieldRow(label,control){
+    return `<div class="flex items-center gap-3"><label class="text-xs text-muted w-16 shrink-0">${label}</label><div class="flex-1 flex items-center">${control}</div></div>`;
+}
+
+// ========== 编辑操作 ==========
+async function editWinner(val){
+    const winner = val === '' ? null : val;
+    const res = await api('/api/admin/edit/batch', {roomId: currentRoom.roomId, fields: {winner: winner, state: 2}});
+    if(res.success) toast('已设置赢家并结束对局','success');
+    else toast(res.message||'更新失败','error');
+}
+
+async function clearUndo(){
+    const res=await api('/api/admin/edit/undo-request',{roomId:currentRoom.roomId,undoRequest:null});
+    if(res.success) toast('已清除','success');
+    else toast(res.message||'操作失败','error');
+}
+
+function delRoom(){
+    showConfirm('确定删除此房间？此操作不可恢复！',async()=>{
+        await api('/api/admin/edit/batch', {roomId: currentRoom.roomId, fields: {state: 2}});
+        const res=await api('/api/admin/delete/room',{roomId:currentRoom.roomId});
+        if(res.success){toast('已删除','success');goBack()}
+        else toast(res.message||'删除失败','error');
+    });
+}
+
+// ========== 窗口缩放重绘 ==========
+window.addEventListener('resize',()=>{if(currentRoom)drawBoard()});
+</script>
+</body>
+</html>
