@@ -579,12 +579,15 @@
         <!-- 新增：API 使用统计卡片 -->
         <div class="lobby-card" id="usageCard">
             <h2><i class="fas fa-chart-bar"></i> API 使用统计</h2>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; margin-bottom:8px;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; margin-bottom:8px;">
                 <span id="usageRequests" style="font-weight:600;">0</span>
                 <span style="color:var(--muted);">上限 100,000 请求</span>
             </div>
             <div style="background:var(--bg2); border-radius:8px; height:14px; overflow:hidden;">
-                <div id="usageBar" style="height:100%; width:0%; background:var(--accent); border-radius:8px; transition:width 0.6s ease;"></div>
+                <div id="usageBar"
+                    style="height:100%; width:0%; background:var(--accent); border-radius:8px; transition:width 0.6s ease;">
+                </div>
             </div>
         </div>
     </div>
@@ -663,6 +666,7 @@
         let lastState = null;
         let gameOver = false;
         let undoModalOpen = false;
+        let undoLocked = false;   // 悔棋按钮冷却锁定
 
         let localTurn = null;
         let pendingMoves = new Map();
@@ -943,8 +947,10 @@
             localStorage.setItem('gmk_uname', uname);
             const rname = document.getElementById('inputRoom').value.trim() || `${uname}的房间`;
             const rid = genRoomId();
-            const data = await api('POST', '/api/rooms/create', { roomId: rid, roomName: rname, playerName: uname,
-                userID: uid });
+            const data = await api('POST', '/api/rooms/create', {
+                roomId: rid, roomName: rname, playerName: uname,
+                userID: uid
+            });
             if (data.success) {
                 roomId = rid;
                 currentRoomName = rname;
@@ -972,6 +978,7 @@
             gameOver = false;
             undoModalOpen = false;
             isLeaving = false;
+            undoLocked = false;
             renderedMap = new Map();
             lastState = null;
             pendingMoves = new Map();
@@ -993,18 +1000,26 @@
             startPoll();
         }
 
-        function startPoll() { stopPoll();
-            tick(); }
+        function startPoll() {
+            stopPoll();
+            tick();
+        }
 
-        function stopPoll() { if (pollTimer) { clearTimeout(pollTimer);
-                pollTimer = null; } }
+        function stopPoll() {
+            if (pollTimer) {
+                clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+        }
 
         async function tick() {
             if (!roomId || gameOver || isLeaving) return;
             try {
                 const data = await api('GET', `/api/rooms/state?roomId=${roomId}&userID=${uid}`);
-                if (data.success && !isLeaving) { lastState = data;
-                    handleUpdate(data); }
+                if (data.success && !isLeaving) {
+                    lastState = data;
+                    handleUpdate(data);
+                }
             } catch (e) { console.error(e); }
             if (!gameOver && !isLeaving) pollTimer = setTimeout(tick, POLL_MS);
         }
@@ -1047,7 +1062,7 @@
                 wh.classList.toggle('is-turn', localTurn === 'white');
                 sb.textContent = myTurn ? '轮到你落子' : '等待对手落子';
                 sb.style.color = myTurn ? 'var(--accent)' : 'var(--muted)';
-                const canUndo = (d.moves || []).length >= 2 && !d.undoRequest && pendingMoves.size === 0;
+                updateUndoButton();
                 document.getElementById('btnUndo').disabled = !canUndo;
                 if (d.undoRequest && d.undoRequest.from !== myColor) {
                     const reqTs = d.undoRequest.timestamp || 0;
@@ -1107,28 +1122,60 @@
             sb.style.color = myTurn ? 'var(--accent)' : 'var(--muted)';
         }
 
-        function requestUndo() { if (lastState?.state === 1 && !lastState.undoRequest && pendingMoves.size === 0) api(
-                'POST', '/api/actions/undo-request', { roomId, userID: uid }).then(d => { if (d.success) toast(
-                    '已发送悔棋请求', 'info');
-                else toast(d.message, 'err') }); }
+        function updateUndoButton() {
+            const btn = document.getElementById('btnUndo');
+            if (!btn) return;
+            const canUndo = !undoLocked
+                && lastState?.state === 1
+                && (lastState.moves || []).length >= 2
+                && !lastState.undoRequest
+                && pendingMoves.size === 0;
+            btn.disabled = !canUndo;
+        }
+        function requestUndo() {
+            if (undoLocked) return;
+            if (!(lastState?.state === 1 && !lastState.undoRequest && pendingMoves.size === 0)) return;
+            undoLocked = true;
+            document.getElementById('btnUndo').disabled = true;
+            api('POST', '/api/actions/undo-request', { roomId, userID: uid }).then(d => {
+                if (d.success) toast('已发送悔棋请求', 'info');
+                else toast(d.message, 'err');
+            }).finally(() => {
+                setTimeout(() => {
+                    undoLocked = false;
+                    updateUndoButton();   // 冷却结束，重新评估按钮状态
+                }, 3000);
+            });
+        }
 
-        function showUndoModal() { undoModalOpen = true;
-            document.getElementById('undoModal').classList.add('show'); }
+        function showUndoModal() {
+            undoModalOpen = true;
+            document.getElementById('undoModal').classList.add('show');
+        }
 
-        function hideUndoModal() { undoModalOpen = false;
-            document.getElementById('undoModal').classList.remove('show'); }
+        function hideUndoModal() {
+            undoModalOpen = false;
+            document.getElementById('undoModal').classList.remove('show');
+        }
 
-        function respondUndo(accept) { const reqTs = lastState?.undoRequest?.timestamp || Date.now();
-            api('POST', '/api/actions/undo-response', { roomId, userID: uid, accept }).then(d => { if (!accept)
+        function respondUndo(accept) {
+            const reqTs = lastState?.undoRequest?.timestamp || Date.now();
+            api('POST', '/api/actions/undo-response', { roomId, userID: uid, accept }).then(d => {
+                if (!accept)
                     lastRejectedUndoTs = reqTs;
                 hideUndoModal(); if (d.success) toast(accept ? '已同意悔棋' : '已拒绝悔棋', accept ? 'ok' : 'info');
-                else toast(d.message, 'err'); }); }
-        async function leaveRoom() { if (isLeaving) return;
+                else toast(d.message, 'err');
+            });
+        }
+        async function leaveRoom() {
+            if (isLeaving) return;
             isLeaving = true;
             stopPoll();
             const savedRoomId = roomId;
-            roomId = null; if (savedRoomId && !gameOver) await api('POST', '/api/rooms/leave', { roomId: savedRoomId,
-                userID: uid });
+            roomId = null; if (savedRoomId && !gameOver) await api('POST', '/api/rooms/leave', {
+                roomId: savedRoomId,
+                userID: uid
+            });
             currentRoomName = '';
             myColor = null;
             lastState = null;
@@ -1141,13 +1188,17 @@
             showPage('lobby-page');
             loadRooms();
             toast('已退出房间', 'ok');
-            isLeaving = false; }
+            undoLocked = false;
+            isLeaving = false;
+        }
 
-        function showResult(icon, title, msg, cls) { document.getElementById('resultIcon').textContent = icon;
+        function showResult(icon, title, msg, cls) {
+            document.getElementById('resultIcon').textContent = icon;
             document.getElementById('resultIcon').className = 'result-icon ' + cls;
             document.getElementById('resultTitle').textContent = title;
             document.getElementById('resultMsg').textContent = msg;
-            document.getElementById('resultModal').classList.add('show'); }
+            document.getElementById('resultModal').classList.add('show');
+        }
 
         function hideResult() { document.getElementById('resultModal').classList.remove('show'); }
 
@@ -1200,26 +1251,38 @@
             document.getElementById('btnLeave').onclick = leaveRoom;
             document.getElementById('btnUndoAccept').onclick = () => respondUndo(true);
             document.getElementById('btnUndoReject').onclick = () => respondUndo(false);
-            document.getElementById('btnBackLobby').onclick = () => { hideResult();
-                leaveRoom(); };
+            document.getElementById('btnBackLobby').onclick = () => {
+                hideResult();
+                leaveRoom();
+            };
             const ov = document.getElementById('boardOverlay');
             ov.addEventListener('click', e => { const p = canvasXY(e.clientX, e.clientY); if (p) tryMove(p.x, p.y); });
-            ov.addEventListener('touchend', e => { e.preventDefault();
+            ov.addEventListener('touchend', e => {
+                e.preventDefault();
                 const t = e.changedTouches[0];
-                const p = canvasXY(t.clientX, t.clientY); if (p) tryMove(p.x, p.y); }, { passive: false });
-            ov.addEventListener('mousemove', e => { const p = canvasXY(e.clientX, e.clientY);
+                const p = canvasXY(t.clientX, t.clientY); if (p) tryMove(p.x, p.y);
+            }, { passive: false });
+            ov.addEventListener('mousemove', e => {
+                const p = canvasXY(e.clientX, e.clientY);
                 hoverX = p?.x ?? -1;
                 hoverY = p?.y ?? -1;
                 drawOverlay();
                 const canClick = !gameOver && localTurn === myColor && !isMoving && lastState?.state === 1;
-                ov.style.cursor = (canClick && p && !renderedMap.has(`${p.x},${p.y}`)) ? 'pointer' : 'default'; });
-            ov.addEventListener('mouseleave', () => { hoverX = hoverY = -1;
+                ov.style.cursor = (canClick && p && !renderedMap.has(`${p.x},${p.y}`)) ? 'pointer' : 'default';
+            });
+            ov.addEventListener('mouseleave', () => {
+                hoverX = hoverY = -1;
                 drawOverlay();
-                ov.style.cursor = 'default'; });
+                ov.style.cursor = 'default';
+            });
             let resizeTimer;
-            window.addEventListener('resize', () => { clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => { if (document.getElementById('game-page').classList.contains(
-                        'active')) { initCanvas(); if (lastState?.moves) redrawAll(lastState.moves); } }, 180); });
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (document.getElementById('game-page').classList.contains(
+                        'active')) { initCanvas(); if (lastState?.moves) redrawAll(lastState.moves); }
+                }, 180);
+            });
             loadRooms();
             // 新增：页面加载时请求一次API使用统计
             fetchUsage();
