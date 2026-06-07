@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>五子棋对弈</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -575,6 +576,17 @@
                 <div class="empty-state"><i class="fas fa-chess-board"></i>点击刷新查看房间</div>
             </div>
         </div>
+        <!-- 新增：API 使用统计卡片 -->
+        <div class="lobby-card" id="usageCard">
+            <h2><i class="fas fa-chart-bar"></i> API 使用统计</h2>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; margin-bottom:8px;">
+                <span id="usageRequests" style="font-weight:600;">0</span>
+                <span style="color:var(--muted);">上限 100,000 请求</span>
+            </div>
+            <div style="background:var(--bg2); border-radius:8px; height:14px; overflow:hidden;">
+                <div id="usageBar" style="height:100%; width:0%; background:var(--accent); border-radius:8px; transition:width 0.6s ease;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- 游戏 -->
@@ -664,9 +676,9 @@
         let hoverX = -1, hoverY = -1;
 
         // 棋盘几何参数（将动态计算）
-        let CELL = 30;       // 格子间距（像素）
-        let PAD = 22;        // 左上边距
-        let SRAD = 13;       // 棋子半径
+        let CELL = 30; // 格子间距（像素）
+        let PAD = 22; // 左上边距
+        let SRAD = 13; // 棋子半径
 
         /* ================================================================
            工具函数（完全保留）
@@ -678,14 +690,26 @@
             document.getElementById('toastWrap').appendChild(el);
             setTimeout(() => el.remove(), 3200);
         }
-        function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-        function genRoomId() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        function genRoomId() {
+            return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+
         async function api(method, path, body) {
             const opt = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) opt.body = JSON.stringify(body);
-            try { return await (await fetch(API_BASE + path, opt)).json(); }
-            catch (e) { toast('网络错误', 'err'); return { success: false, message: 'Network error' }; }
+            try { return await (await fetch(API_BASE + path, opt)).json(); } catch (e) {
+                toast('网络错误', 'err');
+                return { success: false, message: 'Network error' };
+            }
         }
+
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -695,50 +719,30 @@
            棋盘绘制核心 - 绝对居中，无偏移（关键修复）
            ================================================================ */
         function calcGeometry() {
-            // 获取可用最大尺寸（受屏幕限制）
             const maxWidth = Math.min(window.innerWidth - 24, 760);
             const maxHeight = window.innerHeight - 200;
             let maxBoard = Math.min(maxWidth, maxHeight);
             if (maxBoard < 200) maxBoard = 200;
-
-            // 直接通过比例分配空间：
-            // 15路棋盘中间有14个格子。我们留出左右各 0.7 个格子的宽度作为边距 (PAD)
-            // 所以总共需要划分的分数是：(BOARD_SIZE - 1) + 1.4
             CELL = Math.floor(maxBoard / (BOARD_SIZE - 1 + 1.4));
-
-            // 将边距紧凑地固定为 0.7 个格子的宽度
             PAD = Math.floor(CELL * 0.7);
-
-            // 重新推算棋盘总物理尺寸
             let totalSize = (BOARD_SIZE - 1) * CELL + PAD * 2;
-
-            // 动态计算棋子半径，确保不会显得太小
             SRAD = Math.max(6, Math.floor(CELL * 0.43));
-
             return totalSize;
         }
 
         function initCanvas() {
             const totalSize = calcGeometry();
-            const dpr = window.devicePixelRatio || 1; // 获取手机屏幕的高清像素比
-
+            const dpr = window.devicePixelRatio || 1;
             ['boardBg', 'boardStones', 'boardOverlay'].forEach(id => {
                 const c = document.getElementById(id);
-                // 物理像素放大 dpr 倍
                 c.width = totalSize * dpr;
                 c.height = totalSize * dpr;
-                // CSS 尺寸保持原始计算出的自适应大小
                 c.style.width = totalSize + 'px';
                 c.style.height = totalSize + 'px';
-
-                // 缩放绘图上下文，这样其他的绘制代码 (坐标、半径等) 都不用改
                 const ctx = c.getContext('2d');
                 ctx.scale(dpr, dpr);
             });
-
             drawBoardBackground();
-
-            // 清空棋子图层
             const stonesCtx = document.getElementById('boardStones').getContext('2d');
             stonesCtx.clearRect(0, 0, totalSize, totalSize);
             renderedMap.clear();
@@ -747,17 +751,14 @@
         function drawBoardBackground() {
             const c = document.getElementById('boardBg');
             const ctx = c.getContext('2d');
-            const w = c.width, h = c.height;
-
-            // 纯木质底色
+            const w = c.width,
+                h = c.height;
             const grad = ctx.createLinearGradient(0, 0, w * 0.3, h);
             grad.addColorStop(0, '#e0b76a');
             grad.addColorStop(0.5, '#cf9f4a');
             grad.addColorStop(1, '#c2923c');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
-
-            // 隐约木纹
             ctx.globalAlpha = 0.08;
             for (let i = 0; i < 80; i++) {
                 ctx.beginPath();
@@ -768,8 +769,6 @@
                 ctx.stroke();
             }
             ctx.globalAlpha = 1;
-
-            // 绘制网格线（深栗色）
             ctx.beginPath();
             ctx.strokeStyle = '#6b3e1a';
             ctx.lineWidth = 1.8;
@@ -784,11 +783,16 @@
                 ctx.lineTo(pos, PAD + (BOARD_SIZE - 1) * CELL);
                 ctx.stroke();
             }
-
-            // 星位标记
-            const starPoints = [[3, 3], [3, 11], [7, 7], [11, 3], [11, 11]];
+            const starPoints = [
+                [3, 3],
+                [3, 11],
+                [7, 7],
+                [11, 3],
+                [11, 11]
+            ];
             for (const [sx, sy] of starPoints) {
-                const cx = PAD + sx * CELL, cy = PAD + sy * CELL;
+                const cx = PAD + sx * CELL,
+                    cy = PAD + sy * CELL;
                 ctx.beginPath();
                 ctx.arc(cx, cy, Math.max(4, CELL * 0.12), 0, Math.PI * 2);
                 ctx.fillStyle = '#a3713a';
@@ -798,8 +802,6 @@
                 ctx.fillStyle = '#e6b468';
                 ctx.fill();
             }
-
-            // 装饰边框
             ctx.strokeStyle = '#ad7a3e';
             ctx.lineWidth = 2;
             ctx.strokeRect(3, 3, w - 6, h - 6);
@@ -807,7 +809,9 @@
 
         function drawStone(x, y, player) {
             const ctx = document.getElementById('boardStones').getContext('2d');
-            const cx = PAD + x * CELL, cy = PAD + y * CELL, r = SRAD;
+            const cx = PAD + x * CELL,
+                cy = PAD + y * CELL,
+                r = SRAD;
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             if (player === 'black') {
@@ -827,7 +831,6 @@
             ctx.strokeStyle = player === 'black' ? '#444' : '#8f8f8f';
             ctx.lineWidth = 0.8;
             ctx.stroke();
-            // 高光
             ctx.beginPath();
             ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.18, 0, Math.PI * 2);
             ctx.fillStyle = player === 'black' ? 'rgba(200,200,200,0.2)' : 'rgba(255,255,255,0.85)';
@@ -836,7 +839,8 @@
 
         function eraseStone(x, y) {
             const ctx = document.getElementById('boardStones').getContext('2d');
-            const cx = PAD + x * CELL, cy = PAD + y * CELL;
+            const cx = PAD + x * CELL,
+                cy = PAD + y * CELL;
             ctx.clearRect(cx - SRAD - 3, cy - SRAD - 3, (SRAD + 4) * 2, (SRAD + 4) * 2);
         }
 
@@ -847,20 +851,25 @@
             const canHover = !gameOver && localTurn === myColor && !isMoving &&
                 lastState && lastState.state === 1;
             if (canHover && hoverX >= 0 && hoverY >= 0 && !renderedMap.has(`${hoverX},${hoverY}`)) {
-                const cx = PAD + hoverX * CELL, cy = PAD + hoverY * CELL;
+                const cx = PAD + hoverX * CELL,
+                    cy = PAD + hoverY * CELL;
                 ctx.globalAlpha = 0.35;
-                ctx.beginPath(); ctx.arc(cx, cy, SRAD + 2, 0, Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(cx, cy, SRAD + 2, 0, Math.PI * 2);
                 ctx.fillStyle = myColor === 'black' ? '#3b2a1c' : '#e0cfaa';
                 ctx.fill();
                 ctx.globalAlpha = 0.7;
-                ctx.beginPath(); ctx.arc(cx, cy, SRAD - 1, 0, Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(cx, cy, SRAD - 1, 0, Math.PI * 2);
                 ctx.fillStyle = myColor === 'black' ? '#222' : '#faf0ce';
                 ctx.fill();
                 ctx.globalAlpha = 1;
             }
             if (lastPlacedMove) {
-                const cx = PAD + lastPlacedMove.x * CELL, cy = PAD + lastPlacedMove.y * CELL;
-                ctx.beginPath(); ctx.arc(cx, cy, Math.max(4, SRAD * 0.28), 0, Math.PI * 2);
+                const cx = PAD + lastPlacedMove.x * CELL,
+                    cy = PAD + lastPlacedMove.y * CELL;
+                ctx.beginPath();
+                ctx.arc(cx, cy, Math.max(4, SRAD * 0.28), 0, Math.PI * 2);
                 ctx.fillStyle = '#ff7043';
                 ctx.fill();
             }
@@ -930,29 +939,45 @@
         async function createRoom() {
             const name = document.getElementById('inputName').value.trim();
             if (!name) { toast('请输入昵称', 'err'); return; }
-            uname = name; localStorage.setItem('gmk_uname', uname);
+            uname = name;
+            localStorage.setItem('gmk_uname', uname);
             const rname = document.getElementById('inputRoom').value.trim() || `${uname}的房间`;
             const rid = genRoomId();
-            const data = await api('POST', '/api/rooms/create', { roomId: rid, roomName: rname, playerName: uname, userID: uid });
-            if (data.success) { roomId = rid; currentRoomName = rname; myColor = 'black'; enterGame(); }
-            else toast(data.message || '创建失败', 'err');
+            const data = await api('POST', '/api/rooms/create', { roomId: rid, roomName: rname, playerName: uname,
+                userID: uid });
+            if (data.success) {
+                roomId = rid;
+                currentRoomName = rname;
+                myColor = 'black';
+                enterGame();
+            } else toast(data.message || '创建失败', 'err');
         }
 
         async function joinRoom(rid, rname) {
             const name = document.getElementById('inputName').value.trim();
             if (!name) { toast('请输入昵称', 'err'); return; }
-            uname = name; localStorage.setItem('gmk_uname', uname);
+            uname = name;
+            localStorage.setItem('gmk_uname', uname);
             const data = await api('POST', '/api/rooms/join', { roomId: rid, playerName: uname, userID: uid });
-            if (data.success) { roomId = rid; currentRoomName = rname || rid; myColor = 'white'; enterGame(); }
-            else toast(data.message || '加入失败', 'err');
+            if (data.success) {
+                roomId = rid;
+                currentRoomName = rname || rid;
+                myColor = 'white';
+                enterGame();
+            } else toast(data.message || '加入失败', 'err');
         }
 
         function enterGame() {
             showPage('game-page');
-            gameOver = false; undoModalOpen = false; isLeaving = false;
-            renderedMap = new Map(); lastState = null;
-            pendingMoves = new Map(); isMoving = false;
-            localTurn = 'black'; lastPlacedMove = null;
+            gameOver = false;
+            undoModalOpen = false;
+            isLeaving = false;
+            renderedMap = new Map();
+            lastState = null;
+            pendingMoves = new Map();
+            isMoving = false;
+            localTurn = 'black';
+            lastPlacedMove = null;
             lastRejectedUndoTs = 0;
             hoverX = hoverY = -1;
             initCanvas();
@@ -968,14 +993,18 @@
             startPoll();
         }
 
-        function startPoll() { stopPoll(); tick(); }
-        function stopPoll() { if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; } }
+        function startPoll() { stopPoll();
+            tick(); }
+
+        function stopPoll() { if (pollTimer) { clearTimeout(pollTimer);
+                pollTimer = null; } }
 
         async function tick() {
             if (!roomId || gameOver || isLeaving) return;
             try {
                 const data = await api('GET', `/api/rooms/state?roomId=${roomId}&userID=${uid}`);
-                if (data.success && !isLeaving) { lastState = data; handleUpdate(data); }
+                if (data.success && !isLeaving) { lastState = data;
+                    handleUpdate(data); }
             } catch (e) { console.error(e); }
             if (!gameOver && !isLeaving) pollTimer = setTimeout(tick, POLL_MS);
         }
@@ -987,8 +1016,6 @@
             const wh = document.getElementById('cardWhite');
             updateBoard(d.moves || []);
             if (pendingMoves.size === 0) localTurn = d.turn;
-
-            // 修复红点回跳：优先使用本地pending的落子
             if (pendingMoves.size > 0) {
                 let newest = null;
                 let newestTs = -1;
@@ -1002,14 +1029,16 @@
             } else {
                 lastPlacedMove = d.moves?.length ? d.moves[d.moves.length - 1] : null;
             }
-
             if (d.name) {
                 if (myColor === 'black') document.getElementById('nameWhite').textContent = d.name;
                 else document.getElementById('nameBlack').textContent = d.name;
             }
             if (d.state === 0) {
-                sb.textContent = '等待对手加入...'; sb.classList.add('waiting'); sb.style.color = 'var(--accent)';
-                bk.classList.remove('is-turn'); wh.classList.remove('is-turn');
+                sb.textContent = '等待对手加入...';
+                sb.classList.add('waiting');
+                sb.style.color = 'var(--accent)';
+                bk.classList.remove('is-turn');
+                wh.classList.remove('is-turn');
                 document.getElementById('btnUndo').disabled = true;
             } else if (d.state === 1) {
                 sb.classList.remove('waiting');
@@ -1025,11 +1054,14 @@
                     if (reqTs !== lastRejectedUndoTs && !undoModalOpen) showUndoModal();
                 } else if (!d.undoRequest) { lastRejectedUndoTs = 0; if (undoModalOpen) hideUndoModal(); }
             } else if (d.state === 2) {
-                stopPoll(); gameOver = true;
-                document.getElementById('btnUndo').disabled = true; hideUndoModal();
+                stopPoll();
+                gameOver = true;
+                document.getElementById('btnUndo').disabled = true;
+                hideUndoModal();
                 if (d.winner) {
                     const win = d.winner === myColor;
-                    showResult(win ? '🏆' : '🍂', win ? '胜利' : '失败', (win ? '恭喜获胜！' : '对手获胜，') + (d.winner === 'black' ? '黑方' : '白方') + '胜利', win ? 'result-win' : 'result-lose');
+                    showResult(win ? '🏆' : '🍂', win ? '胜利' : '失败', (win ? '恭喜获胜！' : '对手获胜，') + (d.winner ===
+                        'black' ? '黑方' : '白方') + '胜利', win ? 'result-win' : 'result-lose');
                 } else showResult('🚪', '对局结束', '对手已离开房间', 'result-leave');
             }
             drawOverlay();
@@ -1050,18 +1082,23 @@
             drawOverlay();
             api('POST', '/api/actions/move', { roomId, userID: uid, x, y }).then(d => {
                 if (!d.success) {
-                    eraseStone(x, y); renderedMap.delete(`${x},${y}`); pendingMoves.delete(`${x},${y}`);
+                    eraseStone(x, y);
+                    renderedMap.delete(`${x},${y}`);
+                    pendingMoves.delete(`${x},${y}`);
                     localTurn = myColor;
-                    if (lastState?.moves?.length > 0) lastPlacedMove = lastState.moves[lastState.moves.length - 1];
+                    if (lastState?.moves?.length > 0) lastPlacedMove = lastState.moves[lastState.moves.length -
+                        1];
                     else lastPlacedMove = null;
-                    updateTurnDisplay(); drawOverlay();
+                    updateTurnDisplay();
+                    drawOverlay();
                     toast(d.message || '落子失败', 'err');
                 }
             }).finally(() => { isMoving = false; });
         }
 
         function updateTurnDisplay() {
-            const bk = document.getElementById('cardBlack'), wh = document.getElementById('cardWhite');
+            const bk = document.getElementById('cardBlack'),
+                wh = document.getElementById('cardWhite');
             const sb = document.getElementById('statusBar');
             const myTurn = localTurn === myColor;
             bk.classList.toggle('is-turn', localTurn === 'black');
@@ -1070,12 +1107,48 @@
             sb.style.color = myTurn ? 'var(--accent)' : 'var(--muted)';
         }
 
-        function requestUndo() { if (lastState?.state === 1 && !lastState.undoRequest && pendingMoves.size === 0) api('POST', '/api/actions/undo-request', { roomId, userID: uid }).then(d => { if (d.success) toast('已发送悔棋请求', 'info'); else toast(d.message, 'err') }); }
-        function showUndoModal() { undoModalOpen = true; document.getElementById('undoModal').classList.add('show'); }
-        function hideUndoModal() { undoModalOpen = false; document.getElementById('undoModal').classList.remove('show'); }
-        function respondUndo(accept) { const reqTs = lastState?.undoRequest?.timestamp || Date.now(); api('POST', '/api/actions/undo-response', { roomId, userID: uid, accept }).then(d => { if (!accept) lastRejectedUndoTs = reqTs; hideUndoModal(); if (d.success) toast(accept ? '已同意悔棋' : '已拒绝悔棋', accept ? 'ok' : 'info'); else toast(d.message, 'err'); }); }
-        async function leaveRoom() { if (isLeaving) return; isLeaving = true; stopPoll(); const savedRoomId = roomId; roomId = null; if (savedRoomId && !gameOver) await api('POST', '/api/rooms/leave', { roomId: savedRoomId, userID: uid }); currentRoomName = ''; myColor = null; lastState = null; gameOver = false; pendingMoves.clear(); localTurn = null; lastPlacedMove = null; hideUndoModal(); hideResult(); showPage('lobby-page'); loadRooms(); toast('已退出房间', 'ok'); isLeaving = false; }
-        function showResult(icon, title, msg, cls) { document.getElementById('resultIcon').textContent = icon; document.getElementById('resultIcon').className = 'result-icon ' + cls; document.getElementById('resultTitle').textContent = title; document.getElementById('resultMsg').textContent = msg; document.getElementById('resultModal').classList.add('show'); }
+        function requestUndo() { if (lastState?.state === 1 && !lastState.undoRequest && pendingMoves.size === 0) api(
+                'POST', '/api/actions/undo-request', { roomId, userID: uid }).then(d => { if (d.success) toast(
+                    '已发送悔棋请求', 'info');
+                else toast(d.message, 'err') }); }
+
+        function showUndoModal() { undoModalOpen = true;
+            document.getElementById('undoModal').classList.add('show'); }
+
+        function hideUndoModal() { undoModalOpen = false;
+            document.getElementById('undoModal').classList.remove('show'); }
+
+        function respondUndo(accept) { const reqTs = lastState?.undoRequest?.timestamp || Date.now();
+            api('POST', '/api/actions/undo-response', { roomId, userID: uid, accept }).then(d => { if (!accept)
+                    lastRejectedUndoTs = reqTs;
+                hideUndoModal(); if (d.success) toast(accept ? '已同意悔棋' : '已拒绝悔棋', accept ? 'ok' : 'info');
+                else toast(d.message, 'err'); }); }
+        async function leaveRoom() { if (isLeaving) return;
+            isLeaving = true;
+            stopPoll();
+            const savedRoomId = roomId;
+            roomId = null; if (savedRoomId && !gameOver) await api('POST', '/api/rooms/leave', { roomId: savedRoomId,
+                userID: uid });
+            currentRoomName = '';
+            myColor = null;
+            lastState = null;
+            gameOver = false;
+            pendingMoves.clear();
+            localTurn = null;
+            lastPlacedMove = null;
+            hideUndoModal();
+            hideResult();
+            showPage('lobby-page');
+            loadRooms();
+            toast('已退出房间', 'ok');
+            isLeaving = false; }
+
+        function showResult(icon, title, msg, cls) { document.getElementById('resultIcon').textContent = icon;
+            document.getElementById('resultIcon').className = 'result-icon ' + cls;
+            document.getElementById('resultTitle').textContent = title;
+            document.getElementById('resultMsg').textContent = msg;
+            document.getElementById('resultModal').classList.add('show'); }
+
         function hideResult() { document.getElementById('resultModal').classList.remove('show'); }
 
         /* ================================================================
@@ -1084,17 +1157,14 @@
         function canvasXY(clientX, clientY) {
             const canvas = document.getElementById('boardOverlay');
             const rect = canvas.getBoundingClientRect();
-            // 由于canvas.style.width与canvas.width数值相等，无需缩放比
             let canvasX = clientX - rect.left;
             let canvasY = clientY - rect.top;
             if (canvasX < 0 || canvasX > canvas.width || canvasY < 0 || canvasY > canvas.height) return null;
-            // 计算最近的网格交叉点
             const xRaw = (canvasX - PAD) / CELL;
             const yRaw = (canvasY - PAD) / CELL;
             const x = Math.round(xRaw);
             const y = Math.round(yRaw);
             if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return null;
-            // 验证距离（防止点偏很远时误触发）
             const crossX = PAD + x * CELL;
             const crossY = PAD + y * CELL;
             const dist = Math.hypot(canvasX - crossX, canvasY - crossY);
@@ -1103,21 +1173,56 @@
         }
 
         /* ================================================================
+           API 使用统计（新增功能）
+           ================================================================ */
+        async function fetchUsage() {
+            try {
+                const data = await api('GET', '/api/usage');
+                const requests = (data && data.success && typeof data.requests === 'number') ? data.requests : 0;
+                const MAX = 100000;
+                const percent = Math.min(100, Math.round((requests / MAX) * 100));
+                document.getElementById('usageRequests').textContent = requests.toLocaleString();
+                document.getElementById('usageBar').style.width = percent + '%';
+            } catch (e) {
+                // 静默处理，保持默认0
+                console.warn('获取usage失败', e);
+            }
+        }
+
+        /* ================================================================
            初始化 & 事件绑定
            ================================================================ */
         function init() {
             if (uname) document.getElementById('inputName').value = uname;
-            document.getElementById('btnCreate').onclick = createRoom; document.getElementById('btnRefresh').onclick = loadRooms;
-            document.getElementById('btnUndo').onclick = requestUndo; document.getElementById('btnLeave').onclick = leaveRoom;
-            document.getElementById('btnUndoAccept').onclick = () => respondUndo(true); document.getElementById('btnUndoReject').onclick = () => respondUndo(false);
-            document.getElementById('btnBackLobby').onclick = () => { hideResult(); leaveRoom(); };
+            document.getElementById('btnCreate').onclick = createRoom;
+            document.getElementById('btnRefresh').onclick = loadRooms;
+            document.getElementById('btnUndo').onclick = requestUndo;
+            document.getElementById('btnLeave').onclick = leaveRoom;
+            document.getElementById('btnUndoAccept').onclick = () => respondUndo(true);
+            document.getElementById('btnUndoReject').onclick = () => respondUndo(false);
+            document.getElementById('btnBackLobby').onclick = () => { hideResult();
+                leaveRoom(); };
             const ov = document.getElementById('boardOverlay');
             ov.addEventListener('click', e => { const p = canvasXY(e.clientX, e.clientY); if (p) tryMove(p.x, p.y); });
-            ov.addEventListener('touchend', e => { e.preventDefault(); const t = e.changedTouches[0]; const p = canvasXY(t.clientX, t.clientY); if (p) tryMove(p.x, p.y); }, { passive: false });
-            ov.addEventListener('mousemove', e => { const p = canvasXY(e.clientX, e.clientY); hoverX = p?.x ?? -1; hoverY = p?.y ?? -1; drawOverlay(); const canClick = !gameOver && localTurn === myColor && !isMoving && lastState?.state === 1; ov.style.cursor = (canClick && p && !renderedMap.has(`${p.x},${p.y}`)) ? 'pointer' : 'default'; });
-            ov.addEventListener('mouseleave', () => { hoverX = hoverY = -1; drawOverlay(); ov.style.cursor = 'default'; });
-            let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (document.getElementById('game-page').classList.contains('active')) { initCanvas(); if (lastState?.moves) redrawAll(lastState.moves); } }, 180); });
+            ov.addEventListener('touchend', e => { e.preventDefault();
+                const t = e.changedTouches[0];
+                const p = canvasXY(t.clientX, t.clientY); if (p) tryMove(p.x, p.y); }, { passive: false });
+            ov.addEventListener('mousemove', e => { const p = canvasXY(e.clientX, e.clientY);
+                hoverX = p?.x ?? -1;
+                hoverY = p?.y ?? -1;
+                drawOverlay();
+                const canClick = !gameOver && localTurn === myColor && !isMoving && lastState?.state === 1;
+                ov.style.cursor = (canClick && p && !renderedMap.has(`${p.x},${p.y}`)) ? 'pointer' : 'default'; });
+            ov.addEventListener('mouseleave', () => { hoverX = hoverY = -1;
+                drawOverlay();
+                ov.style.cursor = 'default'; });
+            let resizeTimer;
+            window.addEventListener('resize', () => { clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => { if (document.getElementById('game-page').classList.contains(
+                        'active')) { initCanvas(); if (lastState?.moves) redrawAll(lastState.moves); } }, 180); });
             loadRooms();
+            // 新增：页面加载时请求一次API使用统计
+            fetchUsage();
         }
         init();
     </script>
