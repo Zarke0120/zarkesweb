@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+	<meta charset="UTF-8">
+	<title>Steam 视奸Steam好友</title>
+	<link href="https://steam.zarke.ccwu.cc/community/public/shared/css/motiva_sans.css?v=G517uopaUy8x&amp;l=schinese" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/shared/css/buttons.css?v=WgcGW2rjIiQ0&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/shared/css/shared_global.css?v=-J6s2DwQRa4N&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/css/globalv2.css?v=bCsCxIj-tE3S&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/css/skin_1/profilev2.css?v=3oBuDXvUUmCI&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/css/friendsv2.css?v=n5nkvUofEX6l&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/shared/css/shared_responsive.css?v=iWTBNfm6GeKS&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	<link href="https://steam.zarke.ccwu.cc/community/public/css/applications/community/main.css?v=F-f7habATziP&amp;l=schinese&amp;" rel="stylesheet" type="text/css">
+	
+	<style>
+		body { background-color: #171a21; }
+	</style>
+</head>
+
+<body class="v6 game_bg responsive_page">
+
+    <div class="responsive_page_content">
+		<div id="pagecontent" class="pagecontent no_header friends">
+			<div class="friends_container">
+				<div class="friends_content" id="subpage_container">
+					<div id="friends_list" class="friends_list_ctn pagecontent no_header">
+                        <div class="profile_friends search_results" id="search_results"></div>
+                    </div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchFriendsData();
+        });
+
+        // 请求接口获取数据
+        function fetchFriendsData() {
+            fetch('https://steam.zarke.ccwu.cc/api/friends')
+                .then(response => response.json())
+                .then(data => {
+                    renderFriendsList(data);
+                })
+                .catch(error => {
+                    console.error('获取好友列表失败:', error);
+                    document.getElementById('search_results').innerHTML = '<div style="color:red; padding:20px;">数据加载失败，请检查网络或接口状态。</div>';
+                });
+        }
+
+        // 渲染列表逻辑
+        function renderFriendsList(friends) {
+            const container = document.getElementById('search_results');
+            container.innerHTML = ''; // 清空容器
+
+            // 定义状态的展示顺序和文本映射
+            const statusConfig = [
+                { key: 'in-game', label: '游戏中', id: 'state_in-game' },
+                { key: 'online', label: '在线', id: 'state_online' },
+                { key: 'offline', label: '离线', id: 'state_offline' }
+            ];
+
+            // 按照状态遍历处理数据
+            statusConfig.forEach(statusMeta => {
+                // 筛选出当前状态的好友
+                const currentStatusFriends = friends.filter(friend => friend.status === statusMeta.key);
+
+                // 如果当前状态有好友，才渲染 标题 (state_block) 和 好友列表
+                if (currentStatusFriends.length > 0) {
+                    
+                    // 1. 生成并插入状态标题
+                    const stateBlock = document.createElement('div');
+                    stateBlock.id = statusMeta.id;
+                    stateBlock.setAttribute('data-group', statusMeta.key);
+                    stateBlock.className = 'state_block';
+                    stateBlock.textContent = statusMeta.label;
+                    container.appendChild(stateBlock);
+
+                    // 2. 遍历生成该状态下的好友 DOM
+                    currentStatusFriends.forEach(friend => {
+                        const friendBlock = document.createElement('div');
+                        friendBlock.setAttribute('data-panel', '{"flow-children":"row"}');
+                        friendBlock.className = `selectable friend_block_v2 persona ${friend.status}`;
+
+                        // 拼接头像地址
+                        const fullAvatarUrl = `https://steam.zarke.ccwu.cc/image/${friend.imageUrl}`;
+                        
+                        // 根据状态决定额外显示的信息（游戏名 或 上次在线时间）
+                        let extraInfoHTML = '';
+                        if (friend.status === 'in-game' && friend.playing_game_name) {
+                            extraInfoHTML = `
+                                <span class="friend_small_text">
+                                    <span class="friend_game_link">${friend.playing_game_name}</span> 
+                                </span>`;
+                        } else if (friend.status === 'offline') {
+                            extraInfoHTML = `
+                                <span class="friend_small_text"></span>
+                                <span class="friend_last_online_text"> 当前离线 </span>`;
+                        } else {
+                            extraInfoHTML = `<span class="friend_small_text"></span>`;
+                        }
+
+                        // 组装内部 HTML
+                        friendBlock.innerHTML = `
+                            <div class="indicator select_friend">
+                                <input class="select_friend_checkbox" type="checkbox">
+                            </div>
+                            <div class="player_avatar friend_block_link_overlay ${friend.status}">
+                                <img src="${fullAvatarUrl}">
+                            </div>
+                            <div class="friend_block_content">${friend.nickname}<span class="player_nickname_hint" title="您已为此好友选择的昵称"></span><br>
+                                ${extraInfoHTML}
+                            </div>
+                        `;
+
+                        container.appendChild(friendBlock);
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
