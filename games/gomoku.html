@@ -905,6 +905,7 @@
 
         async function api(method, path, body, options = {}) {
             const opt = { method, headers: { 'Content-Type': 'application/json' }, signal: options.signal };
+            if (options.cache) opt.cache = options.cache;
             if (body) opt.body = JSON.stringify(body);
             try { return await (await fetch(API_BASE + path, opt)).json(); } catch (e) {
                 if (e.name === 'AbortError') return { success: false, aborted: true };
@@ -1237,6 +1238,7 @@
                 if (stateVersion) params.set('since', stateVersion);
                 const data = await api('GET', `/api/rooms/state?${params.toString()}`, null, {
                     signal: controller.signal,
+                    cache: 'no-store',
                 });
                 if (pollAbortController === controller) pollAbortController = null;
                 if (generation !== pollGeneration) return;
