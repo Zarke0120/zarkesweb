@@ -240,6 +240,39 @@
             transform: scale(0.98);
         }
 
+        /* 第二个按钮 - 更多资源 */
+        .btn-more {
+            width: 100%;
+            background: linear-gradient(95deg, #28a745, #5cb85c);
+            border: none;
+            padding: 1rem 0;
+            border-radius: 2.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 10px 18px -6px rgba(40, 167, 69, 0.4);
+            border: 0.5px solid rgba(255,255,255,0.3);
+        }
+        .btn-more i {
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        .btn-more:hover {
+            background: linear-gradient(95deg, #218838, #4cae4c);
+            transform: scale(1.01);
+            box-shadow: 0 15px 25px -8px rgba(40, 167, 69, 0.6);
+        }
+        .btn-more:active {
+            transform: scale(0.98);
+        }
+
         /* 辅助提示区 */
         .helper-note {
             text-align: center;
@@ -355,7 +388,7 @@
                 <span>下载链接</span>
             </div>
             <div class="value-area">
-                <div class="value-text" id="downloadLinkText">https://wwbqt.lanzout.com/iog4O3mgfnqb</div>
+                <div class="value-text" id="downloadLinkText">https://wwbqt.lanzout.com/iiipw492391e</div>
                 <button class="copy-btn" id="copyLinkBtn" aria-label="复制链接">
                     <i class="far fa-copy"></i>
                 </button>
@@ -369,7 +402,7 @@
                 <span>访问密码</span>
             </div>
             <div class="value-area">
-                <div class="value-text password-value" id="passwordText">5c22</div>
+                <div class="value-text password-value" id="passwordText">48ri</div>
                 <button class="copy-btn" id="copyPwdBtn" aria-label="复制密码">
                     <i class="far fa-copy"></i>
                 </button>
@@ -382,6 +415,15 @@
                 <i class="fas fa-arrow-right-to-bracket"></i>
                 <span>一键访问</span>
                 <i class="fas fa-lock-open"></i>
+            </button>
+        </div>
+
+        <!-- 第二个按钮：更多资源 -->
+        <div class="primary-action">
+            <button class="btn-more" id="moreBtn">
+                <i class="fas fa-gamepad"></i>
+                <span>更多资源</span>
+                <i class="fas fa-external-link-alt"></i>
             </button>
         </div>
 
@@ -399,8 +441,9 @@
 <script>
     (function() {
         // 配置数据 (符合题目要求)
-        const DOWNLOAD_URL = "https://wwbqt.lanzout.com/iaflz3nkhvmh";
-        const ACCESS_PWD = "7e94";
+        const DOWNLOAD_URL = "https://wwbqt.lanzout.com/iiipw492391e";
+        const ACCESS_PWD = "48ri";
+        const MORE_URL = "https://cs16.info/cn/";
         
         // DOM 元素
         const linkTextEl = document.getElementById('downloadLinkText');
@@ -408,6 +451,7 @@
         const copyLinkBtn = document.getElementById('copyLinkBtn');
         const copyPwdBtn = document.getElementById('copyPwdBtn');
         const accessBtn = document.getElementById('accessBtn');
+        const moreBtn = document.getElementById('moreBtn');
         const toastEl = document.getElementById('toastMsg');
         
         // 显示toast 封装
@@ -490,6 +534,12 @@
                 console.error('打开窗口失败', err);
                 showToast('❌ 无法自动打开，请复制链接手动访问', true);
             }
+        });
+
+        // 更多资源：打开 cs16.info
+        moreBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.open(MORE_URL, '_blank');
         });
         
         // 可选增强：点击链接文本也可复制？提升体验 (非必须，但贴心)
